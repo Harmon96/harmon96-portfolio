@@ -1,0 +1,82 @@
+/* Shared exhibition identity. Case typography and static routes stay in styles.css. */
+.site-header { min-height: 96px; border-bottom-color: #2326211c; }
+.wordmark { font-size: 19px; letter-spacing: -.06em; }
+.wordmark-role { font-family: var(--mono); font-size: 12px; font-weight: 400; letter-spacing: .02em; margin-top: 5px; }
+.site-header nav { gap: 30px; }
+.site-header nav a { font-size: 13px; min-height: 44px; display: inline-flex; align-items: center; }
+.exhibition-home { display: grid; grid-template-columns: minmax(0, .76fr) minmax(0, 1.6fr); gap: 64px; padding-block: 72px 100px; align-items: start; }
+.exhibition-intro { position: sticky; top: 154px; padding-top: 18px; min-width: 0; }
+.intro-role { display: flex; align-items: baseline; gap: 8px; max-width: 290px; font-family: var(--mono); font-size: 12px; line-height: 1.8; color: var(--muted); }
+.intro-role > span { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); flex: 0 0 6px; align-self: center; }
+.exhibition-intro h1 { margin-top: 36px; font-size: clamp(30px, 2.65vw, 40px); letter-spacing: -.065em; line-height: 1.5; font-weight: 550; }
+.exhibition-intro h1 > span { display: block; }
+.exhibition-intro h1 > span + span { margin-top: 18px; color: #74786e; }
+.intro-note { margin-top: 30px; font-size: 14px; line-height: 1.9; color: var(--muted); }
+.intro-experiment-link { display: inline-flex; align-items: center; gap: 16px; min-height: 44px; margin-top: 22px; color: var(--blue-ink); font-size: 13px; }
+.intro-experiment-link:hover { text-decoration: underline; text-underline-offset: 5px; }
+.intro-index { margin-top: 72px; display: flex; gap: 36px; font-family: var(--mono); font-size: 12px; letter-spacing: .04em; color: var(--muted); }
+.exhibition-work { min-width: 0; }
+.exhibition-work-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 18px; margin-bottom: 22px; }
+.exhibition-work-heading h2 { font-size: 14px; font-weight: 550; }
+.exhibition-work-heading > span { font-size: 12px; color: var(--muted); }
+.section-kicker { font-family: var(--mono); font-size: 12px; color: var(--muted); font-weight: 400; letter-spacing: .06em; }
+.exhibition-about { display: grid; grid-template-columns: minmax(0, .76fr) minmax(0, 1.6fr); gap: 64px; padding-block: 110px 100px; border-top: 1px solid var(--line); }
+.about-heading h2 { font-size: clamp(30px, 3.2vw, 44px); line-height: 1.45; letter-spacing: -.06em; font-weight: 550; margin-top: 25px; }
+.about-heading .about-links { margin-top: 32px; }
+.about-story { max-width: 680px; min-width: 0; }
+.about-story > p { font-size: 15px; color: var(--muted); line-height: 1.95; }
+.about-story > .about-lead { font-size: 22px; color: var(--ink); line-height: 1.7; letter-spacing: -.04em; margin-bottom: 24px; }
+.about-story .about-more { margin-top: 28px; }
+.about-story .about-more summary { min-height: 52px; font-size: 14px; }
+.about-principle h3 { font-size: 14px; font-weight: 550; margin-block: 9px 5px; }
+.about-story .about-more p { font-size: 14px; }
+.exhibition-careers { margin-top: 42px; }
+.exhibition-careers article { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; padding-block: 22px; border-bottom: 1px solid var(--line); }
+.exhibition-careers h4 { font-size: 15px; font-weight: 550; }
+.exhibition-careers article p, .exhibition-careers article > span { font-size: 12px; line-height: 1.8; color: var(--muted); }
+.exhibition-careers article > span { font-family: var(--mono); }
+.exhibition-careers .career-description { grid-column: 1 / -1; }
+.about-story .exhibition-writing-note { font-size: 12px; margin-top: 28px; }
+.site-footer { gap: 30px; }
+.footer-links { flex-wrap: wrap; row-gap: 8px; }
+.footer-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px; }
+.footer-name .mono { font-size: 12px; }
+.site-footer p { max-width: 440px; }
+.case-meta dt, .flow-diagram figcaption, .diagram-hint, .flow-note, .flow-node, .diagram-heading .mono, .flow-detail > .mono { font-size: 12px; }
+@media (max-width: 1100px) {
+  .exhibition-home, .exhibition-about { gap: 36px; }
+  .exhibition-intro h1 { font-size: 30px; }
+}
+@media (max-width: 1023px) {
+  .exhibition-home { grid-template-columns: 1fr; gap: 52px; padding-block: 46px 72px; }
+  .exhibition-intro { position: static; padding-top: 0; }
+  .exhibition-intro h1 { font-size: 40px; margin-top: 25px; }
+  .exhibition-intro h1 > span { display: inline; }
+  .exhibition-intro h1 > span + span { display: block; margin-top: 8px; }
+  .exhibition-intro h1 br { display: none; }
+  .intro-note { margin-top: 20px; }
+  .intro-note br { display: none; }
+  .intro-experiment-link { margin-top: 12px; }
+  .intro-index { display: none; }
+  .exhibition-about { grid-template-columns: 1fr 1.6fr; gap: 36px; padding-block: 70px; }
+}
+@media (max-width: 767px) {
+  .site-header { min-height: 86px; }
+  .site-header nav { gap: 22px; }
+  .exhibition-home { gap: 36px; padding-top: 38px; }
+  .exhibition-intro h1 { font-size: clamp(27px, 5.3vw, 38px); }
+  .exhibition-intro h1 br { display: initial; }
+  .intro-role { max-width: none; font-size: 12px; }
+  .intro-note { max-width: 260px; font-size: 13px; }
+  .exhibition-work-heading { align-items: baseline; }
+  .exhibition-about { grid-template-columns: 1fr; gap: 36px; padding-block: 56px; }
+  .about-heading h2 { font-size: 34px; }
+  .about-heading .about-links { margin-top: 16px; }
+  .about-story > .about-lead { font-size: 19px; }
+  .about-story > p { font-size: 14px; }
+  .exhibition-careers article { grid-template-columns: 1fr; gap: 4px; }
+  .site-footer { align-items: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}

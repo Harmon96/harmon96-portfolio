@@ -1,0 +1,19 @@
+import { createRoot, hydrateRoot } from 'react-dom/client';
+import { App, pageMetadata } from './App';
+import { localPath } from './lib/routes';
+import './styles.css';
+import 'lenis/dist/lenis.css';
+import './exhibition.css';
+import './components/case-sculpture.css';
+import './spatial.css';
+import './components/water-intro.css';
+
+const base = import.meta.env.BASE_URL;
+const path = localPath(window.location.pathname, base);
+const metadata = pageMetadata(path);
+document.title = metadata.title;
+document.querySelector('meta[name="description"]')?.setAttribute('content', metadata.description);
+const root = document.getElementById('root')!;
+const app = <App path={path} base={base} />;
+if (root.hasChildNodes()) hydrateRoot(root, app);
+else createRoot(root).render(app);
