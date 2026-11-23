@@ -97,7 +97,7 @@ export function createWorld(options: Options): WorldController {
   let reduced = options.reduced;
   let twist = .35;
   let frame = 0, lastTime = 0, running = true, disposed = false, entered = false;
-  let pointer: null | { id: number; x: number; y: number; lastX: number; lastTime: number; moved: boolean; yaw: number; pitch: number; hit: string | null; rotation: THREE.Euler | null; twist: number; letter: THREE.Object3D | null; letterStart: THREE.Vector3 | null; planeStart: THREE.Vector3 | null } = null;
+  let pointer: null | { id: number; x: number; y: number; lastX: number; lastTime: number; moved: boolean; yaw: number; pitch: number; hit: string | null; rotate: THREE.Group | null; rotation: THREE.Euler | null; twist: number; letter: THREE.Object3D | null; letterStart: THREE.Vector3 | null; planeStart: THREE.Vector3 | null } = null;
   const fine = matchMedia('(pointer: fine)').matches;
   const getExhibit = (id: string | null) => exhibits.find((item) => item.id === id);
 
@@ -143,15 +143,16 @@ export function createWorld(options: Options): WorldController {
     camera.fov = mobile ? 42 : 38;
     camera.updateProjectionMatrix();
     renderer.setSize(width, height, false);
-    // Preserve the same exhibits on small screens, composed vertically with nearer silhouettes.
+    // Leave a gutter between silhouettes, including on narrow, tall canvases.
+    const halfWidth = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * (mobile ? 12 : 10.8) * camera.aspect;
+    const spread = Math.min(1.4, halfWidth / 5.7);
     for (let i = 0; i < spatialWorks.length; i++) {
-      const e = exhibits[i]!;
-      const original = spatialWorks[i]!;
-      if (mobile) {
-        const positions = [[-1, 1.15, .7], [1.3, .65, -1.6], [-1.1, -.5, -.9], [1.25, -.5, .7]];
-        e.position.fromArray(positions[i]!);
-        e.scale = original.scale * (i > 1 ? .72 : .9);
-      } else { e.position.fromArray(original.position); e.scale = original.scale; }
+      const exhibit = exhibits[i]!;
+      const work = spatialWorks[i]!;
+      exhibit.position.fromArray(work.position);
+      exhibit.position.x *= spread;
+      exhibit.scale = work.scale * Math.min(1, halfWidth / 3.5);
+      if (mobile) exhibit.position.y += .38;
     }
     if (mobile) {
       getExhibit('ribbon')!.position.set(-.5, 1, .1);
@@ -161,6 +162,12 @@ export function createWorld(options: Options): WorldController {
       getExhibit('ribbon')!.position.set(-2, .2, .2);
       getExhibit('type')!.position.set(1.8, -.1, -.1);
       getExhibit('type')!.scale = .85;
+    }
+    if (!entered) {
+      for (const exhibit of exhibits) {
+        exhibit.sculpture.group.position.copy(exhibit.position);
+        exhibit.sculpture.group.scale.setScalar(exhibit.mode === mode ? exhibit.scale : .001);
+      }
     }
     updateCameraGoal();
     updateLighting();
@@ -232,6 +239,10 @@ export function createWorld(options: Options): WorldController {
   function pointerDown(event: globalThis.PointerEvent) {
     if (!event.isPrimary || event.button !== 0) return;
     const intersection = hit(event);
+    // Keep the drag bound to the work under the initial press, even across other works.
+    const hitId: string | null = intersection?.object.userData.exhibitId ?? null;
+    if (mode === 'work' && !selected && !hitId) return;
+    const rotate = getExhibit(selected ?? (mode === 'work' ? hitId : null))?.sculpture.group ?? null;
     let letter: THREE.Object3D | null = intersection?.object ?? null;
     while (letter && letter.userData.letterIndex === undefined) letter = letter.parent;
     if (selected !== 'type') letter = null;
@@ -242,15 +253,15 @@ export function createWorld(options: Options): WorldController {
       dragPlane.setFromNormalAndCoplanarPoint(direction, dragPoint);
       planeStart = raycaster.ray.intersectPlane(dragPlane, new THREE.Vector3());
     }
-    pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, lastX: event.clientX, lastTime: performance.now(), moved: false, yaw, pitch, hit: intersection?.object.userData.exhibitId ?? null, rotation: getExhibit(selected)?.sculpture.group.rotation.clone() ?? null, twist, letter, letterStart: letter?.position.clone() ?? null, planeStart };
+    pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, lastX: event.clientX, lastTime: performance.now(), moved: false, yaw, pitch, hit: hitId, rotate, rotation: rotate?.rotation.clone() ?? null, twist, letter, letterStart: letter?.position.clone() ?? null, planeStart };
     velocity = 0;
     canvas.setPointerCapture(event.pointerId);
   }
   function pointerMove(event: globalThis.PointerEvent) {
     if (!pointer) {
-      if (!fine) return;
+      if (!fine || event.buttons !== 0) return;
       const next = hit(event)?.object.userData.exhibitId ?? null;
-      if (hover !== next) { hover = next; canvas.style.cursor = next ? 'pointer' : 'grab'; invalidate(); }
+      if (hover !== next) { hover = next; canvas.style.cursor = next ? (mode === 'play' ? 'pointer' : 'grab') : ''; invalidate(); }
       return;
     }
     if (pointer.id !== event.pointerId) return;
@@ -274,8 +285,8 @@ export function createWorld(options: Options): WorldController {
       }
     } else if (selected === 'ribbon') {
       twist = clamp(pointer.twist + dx / width, 0, 1);
-    } else if (selected && pointer.rotation) {
-      const g = getExhibit(selected)!.sculpture.group;
+    } else if (pointer.rotate && pointer.rotation) {
+      const g = pointer.rotate;
       g.rotation.y = pointer.rotation.y + dx * .012;
       g.rotation.x = clamp(pointer.rotation.x + (mobile ? 0 : dy * .008), -1.3, 1.3);
     } else {
@@ -299,6 +310,7 @@ export function createWorld(options: Options): WorldController {
   function leave() { if (!pointer) { hover = null; invalidate(); } }
   function keyDown(event: KeyboardEvent) {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home'].includes(event.key)) return;
+    if (mode === 'work' && !selected) return;
     event.preventDefault();
     resetPointer(); velocity = 0; options.onInteract();
     const active = getExhibit(selected);
@@ -347,6 +359,7 @@ export function createWorld(options: Options): WorldController {
       if (mode === next) return;
       mode = next; selected = null; hover = null; velocity = 0; resetPointer();
       yaw = -.06; pitch = .12;
+      canvas.style.cursor = '';
       canvas.dataset.mode = next;
       updateLighting();
       invalidate();

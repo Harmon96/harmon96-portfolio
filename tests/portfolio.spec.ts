@@ -188,15 +188,7 @@ test('선택 상태: 빠른 작업 전환, 상세 이동 후 뒤로가기와 재
   expect(errors).toEqual([]);
 });
 
-test('입체 공간: 실제 드래그로 시점이 바뀌고 놓은 뒤에도 유지', async ({ page, isMobile }) => {
-  await page.goto('./');
-  const canvas = await readyWorkspace(page);
-  await canvas.scrollIntoViewIfNeeded();
-  const initialYaw = Number(await canvas.getAttribute('data-view-yaw'));
-  const bounds = (await canvas.boundingBox())!;
-  const x = Math.round(bounds.x + bounds.width * .3);
-  const y = Math.round(bounds.y + bounds.height * .28);
-  const distance = Math.min(120, Math.round(bounds.width * .25));
+async function dragCanvas(page: Page, isMobile: boolean, x: number, y: number, distance: number) {
   if (isMobile) {
     const session = await page.context().newCDPSession(page);
     try {
@@ -211,14 +203,75 @@ test('입체 공간: 실제 드래그로 시점이 바뀌고 놓은 뒤에도 �
     await page.mouse.move(x + distance, y + 10, { steps: 12 });
     await page.mouse.up();
   }
-  await expect.poll(async () => Math.abs(Number(await canvas.getAttribute('data-view-yaw')) - initialYaw)).toBeGreaterThan(.05);
+}
+
+test('네 작품을 차례로 드래그하면 잡은 작품만 회전한다', async ({ page, isMobile }) => {
+  await page.goto('./');
+  const canvas = await readyWorkspace(page);
+  await canvas.scrollIntoViewIfNeeded();
+  const bounds = (await canvas.boundingBox())!;
+  const yaw = await canvas.getAttribute('data-view-yaw');
+  // Sample a visible surface on each model. The mobile layout uses a taller gallery.
+  const surfaces = isMobile
+    ? [[.2, .24], [.735, .213], [.285, .507], [.706, .556]]
+    : [[.2, .24], [.766, .205], [.29, .578], [.70, .63]];
+  const points = surfaces.map(([x, y]) => ({
+    x: Math.round(bounds.x + bounds.width * x),
+    y: Math.round(bounds.y + bounds.height * y),
+  }));
+  const capture = async () => (await page.screenshot({ scale: 'css' })).toString('base64');
+  let before = await capture();
+  for (const [index, point] of points.entries()) {
+    await dragCanvas(page, isMobile, point.x, point.y, 65);
+    await page.mouse.move(0, 0);
+    await expect(canvas).toHaveAttribute('data-settled', 'true');
+    await expect(canvas).toHaveAttribute('data-selected', '');
+    await expect(canvas).toHaveAttribute('data-view-yaw', yaw!);
+    const after = await capture();
+    const changes = await page.evaluate(async ({ before, after, points }) => {
+      const images = await Promise.all([before, after].map(async (png) => {
+        const image = new Image();
+        image.src = 'data:image/png;base64,' + png;
+        await image.decode();
+        return image;
+      }));
+      const sample = document.createElement('canvas');
+      sample.width = sample.height = 40;
+      const ctx = sample.getContext('2d', { willReadFrequently: true })!;
+      return points.map(({ x, y }) => {
+        const [first, last] = images.map((image) => {
+          ctx.drawImage(image, x - 20, y - 20, 40, 40, 0, 0, 40, 40);
+          return ctx.getImageData(0, 0, 40, 40).data;
+        });
+        let changed = 0;
+        for (let i = 0; i < first.length; i += 4) {
+          if ([0, 1, 2].some((channel) => Math.abs(first[i + channel] - last[i + channel]) > 8)) changed++;
+        }
+        return changed / (40 * 40);
+      });
+    }, { before, after, points });
+    for (const [other, fraction] of changes.entries()) {
+      const check = expect(fraction, `${cases[index][0]} drag / ${cases[other][0]} image`);
+      if (other === index) check.toBeGreaterThan(.03);
+      else check.toBeLessThan(.01);
+    }
+    before = after;
+  }
+});
+
+test('빈 공간을 드래그하거나 방향키를 눌러도 작품 전체가 돌지 않는다', async ({ page, isMobile }) => {
+  await page.goto('./');
+  const canvas = await readyWorkspace(page);
+  await canvas.scrollIntoViewIfNeeded();
+  const yaw = await canvas.getAttribute('data-view-yaw');
+  const bounds = (await canvas.boundingBox())!;
+  await dragCanvas(page, isMobile, bounds.x + bounds.width * .5, bounds.y + bounds.height * .28, 65);
+  await canvas.focus();
+  await page.keyboard.press('ArrowRight');
+  await waitFrames(page);
   await expect(canvas).toHaveAttribute('data-settled', 'true');
-  await waitFrames(page, 30);
-  expect(Math.abs(Number(await canvas.getAttribute('data-view-yaw')) - initialYaw)).toBeGreaterThan(.05);
-  await expect(canvas).not.toHaveClass(/is-dragging/);
+  await expect(canvas).toHaveAttribute('data-view-yaw', yaw!);
   await expect(canvas).toHaveAttribute('data-selected', '');
-  await page.getByRole('button', { name: '해외 상품 직접구매 플랫폼 선택', exact: true }).click();
-  await expect(canvas).toHaveAttribute('data-selected', '1688-direct-purchase');
 });
 
 test('모바일: 캔버스 위의 세로 스와이프는 작품 선택 없이 페이지 스크롤', async ({ page, isMobile }) => {
@@ -285,8 +338,8 @@ test('실험: 띠 변형·초기화, 글자 이동 유지·초기화와 작업 �
   await expect(page.getByRole('group', { name: '프로젝트 선택', exact: true })).toBeVisible();
 });
 
-test('키보드 시점 이동과 드래그 중단 후 띠 조절값 유지', async ({ page }) => {
-  await page.goto('./');
+test('실험에서 키보드 시점 이동과 드래그 중단 후 띠 조절값 유지', async ({ page }) => {
+  await page.goto('./#experiments');
   const canvas = await readyWorkspace(page);
   const original = await canvas.getAttribute('data-view-yaw');
   await canvas.focus();
@@ -295,8 +348,6 @@ test('키보드 시점 이동과 드래그 중단 후 띠 조절값 유지', asy
   await expect(canvas).not.toHaveAttribute('data-view-yaw', original!);
   await page.keyboard.press('Home');
   await expect(canvas).toHaveAttribute('data-view-yaw', original!);
-  await page.goto('./#experiments');
-  await readyWorkspace(page);
   const choose = page.getByRole('group', { name: '실험 선택' });
   await choose.getByRole('button', { name: '비틀어보기', exact: true }).click();
   await expect(canvas).toHaveAttribute('data-settled', 'true');

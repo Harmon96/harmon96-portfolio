@@ -96,8 +96,8 @@ export function SpatialWorkspace({ base }: { base: string }) {
         <div className="workspace-word">{mode === 'work' ? 'WORK' : 'PLAY'}</div>
         {!ready && <div className="workspace-loading-shape" />}
       </div>
-      <canvas ref={canvas} className="spatial-stage" tabIndex={ready ? 0 : -1} role="img" aria-describedby="workspace-keyboard-guide" aria-label={mode === 'work' ? '드래그해서 돌려보는 입체 작업 공간' : '직접 조작하는 입체 실험 공간'} data-ready="false" data-view-yaw="0" />
-      <span className="sr-only" id="workspace-keyboard-guide">방향키로 공간이나 선택한 작품을 돌릴 수 있습니다. Home 키로 처음 방향으로 돌아갑니다. 띠를 선택하면 좌우 방향키로 비틀 수 있습니다.</span>
+      <canvas ref={canvas} className="spatial-stage" tabIndex={ready ? 0 : -1} role="img" aria-describedby="workspace-keyboard-guide" aria-label={mode === 'work' ? '작품을 잡아 돌려보는 전시장' : '직접 조작하는 입체 실험 공간'} data-ready="false" data-view-yaw="0" />
+      <span className="sr-only" id="workspace-keyboard-guide">{mode === 'work' ? '작품을 선택한 뒤 캔버스에서 방향키로 돌릴 수 있습니다. Home 키로 작품을 처음 방향으로 돌립니다.' : '방향키로 실험 공간을 돌리고 Home 키로 처음 방향으로 돌아갑니다. 띠를 선택하면 좌우 방향키로 비틀 수 있습니다.'}</span>
       <div className="workspace-topline"><span>{mode === 'work' ? 'SELECTED WORK / 01—04' : 'SMALL EXPERIMENTS / 01—02'}</span><span>임재혁의 작업과 실험</span></div>
       <div className="workspace-labels" ref={labels}>
         {spatialWorks.map((item) => <button type="button" data-anchor={item.slug} key={item.slug} aria-label={`${projects.find((p) => p.slug === item.slug)!.name} 작품 보기`} onClick={() => setSelected(item.slug)}><span className="workspace-label-dot" style={{ background: item.color }} /><span>{item.shortName}</span><span aria-hidden="true">↗</span></button>)}
@@ -123,7 +123,7 @@ export function SpatialWorkspace({ base }: { base: string }) {
         </aside>
       )}
       <div className="workspace-bottom">
-        <p className="workspace-gesture">{failed ? '작업 이름을 눌러 살펴보세요.' : interacted ? '원하는 작업을 선택해보세요.' : '드래그해서 둘러보세요.'}<span aria-hidden="true">↔</span></p>
+        <p className="workspace-gesture">{failed ? '작업 이름을 눌러 살펴보세요.' : interacted ? '원하는 작업을 선택해보세요.' : mode === 'work' ? '작품을 드래그해 돌려보세요.' : '드래그해서 둘러보세요.'}<span aria-hidden="true">↔</span></p>
         <div className="workspace-chooser" ref={chooser} role="group" aria-label={mode === 'work' ? '프로젝트 선택' : '실험 선택'}>
           {mode === 'work' ? projects.map((project) => <button type="button" key={project.slug} data-work={project.slug} aria-label={`${project.name} 선택`} aria-pressed={selected === project.slug} onClick={() => setSelected(project.slug)}><span>{project.number}</span>{project.name}</button>) : playItems.map((item, i) => <button type="button" key={item.id} data-work={item.id} aria-label={item.title} aria-pressed={selected === item.id} onClick={() => setSelected(item.id)}><span>0{i + 1}</span>{item.title}</button>)}
         </div>
