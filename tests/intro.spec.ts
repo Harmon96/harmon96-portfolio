@@ -5,10 +5,32 @@ test('첫 방문에 세 번 물방울을 떨어뜨리면 전시장이 열리고 
   const dialog = page.getByRole('dialog', { name: '물방울을 떨어뜨려 주세요' });
   const water = dialog.getByRole('button', { name: '물방울 떨어뜨리기' });
   await expect(dialog).toBeVisible();
+  const trail = dialog.locator('.water-trail span');
+  if (!isMobile) {
+    await page.mouse.move(45, 180);
+    await page.mouse.move(200, 200, { steps: 10 });
+    await expect(trail.first()).toBeVisible();
+    await expect(trail.first()).toHaveText(/[·◦]/);
+    await expect(dialog.locator('#water-progress')).toHaveText('물방울 세 개 중 0개');
+    await expect(trail).toHaveCount(0);
+  }
+  let firstWidth = 0;
   for (let count = 1; count <= 3; count++) {
     const position = { x: 40 + count * 10, y: 200 };
     if (isMobile) await water.tap({ position });
     else await water.click({ position });
+    const ring = water.locator('.water-ring').nth(count - 1);
+    await expect(ring).toContainText('·');
+    await expect(ring).toContainText('◦');
+    const size = await ring.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2, width: element.clientWidth };
+    });
+    expect(size.x).toBeCloseTo(position.x, 0);
+    expect(size.y).toBeCloseTo(position.y, 0);
+    if (count === 1) firstWidth = size.width;
+    if (count === 3) expect(size.width).toBeGreaterThan(firstWidth);
+    if (isMobile) await expect(trail).toHaveCount(0);
     if (count < 3) await expect(dialog.locator('#water-progress')).toHaveText('물방울 세 개 중 ' + count + '개');
   }
   await expect(dialog).toHaveCount(0);
@@ -28,6 +50,8 @@ test('모션 감소 설정에서 키보드로 입장하고 Escape로 다시 보�
   await page.goto('./');
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('button', { name: '물방울 떨어뜨리기' })).toBeFocused();
+  await page.mouse.move(200, 200, { steps: 10 });
+  await expect(dialog.locator('.water-trail span').first()).toBeHidden();
   await page.keyboard.press('Space');
   await expect(dialog.locator('#water-progress')).toHaveText('물방울 세 개 중 1개');
   await expect(dialog.locator('.water-ring')).toBeHidden();

@@ -68,6 +68,24 @@ html:has(.water-intro[open]) { overflow: hidden; }
 .water-count i { width: 7px; height: 7px; border: 1px solid #315659; border-radius: 50%; }
 .water-count i[data-filled='true'] { background: #315659; }
 
+.water-trail { position: absolute; inset: 0; pointer-events: none; }
+.water-trail > span, .water-ring-glyph {
+  position: absolute;
+  color: #295c65;
+  font: 500 clamp(13px, 1.15vw, 18px)/1 var(--mono);
+  text-shadow: 0 1px 2px #f5fff4;
+  user-select: none;
+  pointer-events: none;
+}
+.water-trail > span {
+  white-space: pre;
+  animation: water-trail-fade 680ms ease-out both;
+}
+@keyframes water-trail-fade {
+  from { opacity: .8; transform: translate(-50%, -50%); }
+  to { opacity: 0; transform: translate(-50%, calc(-50% - 7px)); }
+}
+.water-ring-glyph { transform: translate(-50%, -50%); }
 .water-ring, .water-ring::before, .water-ring::after {
   position: absolute;
   border-radius: 50%;
@@ -80,6 +98,7 @@ html:has(.water-intro[open]) { overflow: hidden; }
   box-shadow: inset 0 3px 3px #38667165, 0 2px 4px #44737775;
   animation: water-spread 1700ms cubic-bezier(.13,.54,.33,1) both;
 }
+.water-ring-final { width: clamp(310px, 58vw, 920px); }
 .water-ring::before, .water-ring::after { content: ''; inset: 7%; border: 2px solid #f1fff5ba; box-shadow: 0 2px 3px #38667165; }
 .water-ring::after { inset: 18%; opacity: .6; }
 .water-intro[data-entering='true'] { animation: water-enter 650ms 400ms ease-in-out forwards; }
@@ -89,6 +108,6 @@ html:has(.water-intro[open]) { overflow: hidden; }
 }
 @keyframes water-enter { to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .water-ring { display: none; }
+  .water-trail, .water-ring { display: none; }
   .water-intro[data-entering='true'] { animation: none; }
 }

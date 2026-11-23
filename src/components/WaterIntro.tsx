@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 
 const seenKey = 'harmon96-portfolio:intro-seen:v1';
@@ -47,8 +47,27 @@ function LakeReflections() {
   return <canvas className="water-reflections" ref={canvas} aria-hidden="true" />;
 }
 
+// Keep the characters just outside the crest, where they stay legible over the reflection.
+function CharacterRing({ drop, final }: { drop: Drop; final: boolean }) {
+  const count = final ? 54 : 32;
+  return (
+    <span aria-hidden="true" className={final ? 'water-ring water-ring-final' : 'water-ring'}
+      style={{ left: drop.x + '%', top: drop.y + '%' }}>
+      {Array.from({ length: count }, (_, index) => {
+        const angle = (index / count) * Math.PI * 2;
+        return <span key={index} className="water-ring-glyph" style={{
+          left: (50 + Math.cos(angle) * 52) + '%',
+          top: (50 + Math.sin(angle) * 54) + '%',
+        }}>{index % 3 === 0 ? '◦' : '·'}</span>;
+      })}
+    </span>
+  );
+}
+
 export function WaterIntro() {
   const dialog = useRef<HTMLDialogElement>(null);
+  const trail = useRef<HTMLSpanElement>(null);
+  const lastMark = useRef({ x: 0, y: 0, at: -Infinity });
   const [available, setAvailable] = useState(false);
   const [open, setOpen] = useState(false);
   const [drops, setDrops] = useState<Drop[]>([]);
@@ -90,6 +109,24 @@ export function WaterIntro() {
     return () => window.clearTimeout(timer);
   }, [drops.length, reducedMotion, enter]);
 
+  // Sample pointer travel without rerendering the intro on every mouse movement.
+  function traceWater(event: PointerEvent<HTMLButtonElement>) {
+    const layer = trail.current;
+    if (!layer || event.pointerType !== 'mouse' || event.buttons !== 0) return;
+    const { clientX: x, clientY: y, timeStamp: at } = event;
+    const previous = lastMark.current;
+    if (at - previous.at < 32 || (at - previous.at < 700 && Math.hypot(x - previous.x, y - previous.y) < 11)) return;
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const mark = document.createElement('span');
+    mark.textContent = layer.childElementCount % 2 === 0 ? '· ◦' : '◦ ·';
+    mark.style.left = (x - bounds.left) + 'px';
+    mark.style.top = (y - bounds.top) + 'px';
+    mark.addEventListener('animationend', () => mark.remove(), { once: true });
+    layer.appendChild(mark);
+    lastMark.current = { x, y, at };
+  }
+
   function ripple(event: MouseEvent<HTMLButtonElement>) {
     const bounds = event.currentTarget.getBoundingClientRect();
     const drop = event.detail === 0
@@ -106,8 +143,9 @@ export function WaterIntro() {
         <dialog className="water-intro" ref={dialog} data-lenis-prevent data-entering={drops.length === 3}
           aria-labelledby="water-title" onCancel={(event) => { event.preventDefault(); enter(); }}>
           <LakeReflections />
-          <button className="water-surface" type="button" aria-label="물방울 떨어뜨리기" aria-describedby="water-progress" onClick={ripple}>
-            {drops.map((drop, index) => <span key={index} className="water-ring" style={{ left: drop.x + '%', top: drop.y + '%' }} />)}
+          <button className="water-surface" type="button" aria-label="물방울 떨어뜨리기" aria-describedby="water-progress" onPointerMove={traceWater} onClick={ripple}>
+            {!reducedMotion && drops.length < 3 && <span className="water-trail" ref={trail} aria-hidden="true" />}
+            {drops.map((drop, index) => <CharacterRing key={index} drop={drop} final={index === 2} />)}
           </button>
           <span className="water-signature" aria-hidden="true">임재혁 <span>Portfolio</span></span>
           <button className="water-skip" type="button" onClick={enter}>건너뛰기 <span aria-hidden="true">↗</span></button>
