@@ -13,34 +13,28 @@ body { background: var(--paper); }
 .spatial-stage { width: 100%; height: 100%; display: block; cursor: grab; touch-action: pan-y pinch-zoom; outline-offset: -4px; }
 .workspace[data-mode='work']:not(.has-selection) .spatial-stage { cursor: default; }
 .spatial-stage.is-dragging { cursor: grabbing !important; }
-.workspace-topline { position: absolute; inset: 8px 36px auto; display: flex; justify-content: space-between; gap: 24px; pointer-events: none; font: 11px/1.5 var(--mono); letter-spacing: .04em; color: #646b61; z-index: 3; }
-.workspace-topline > span:last-child { font-family: inherit; letter-spacing: 0; }
-.workspace-introduction { position: absolute; left: 36px; bottom: 157px; max-width: 330px; pointer-events: none; z-index: 3; transition: opacity 220ms; }
+.workspace-introduction { position: absolute; left: 36px; bottom: 110px; max-width: 330px; pointer-events: none; z-index: 3; transition: opacity 220ms; }
 .workspace-introduction > p { font: 11px/1.7 var(--mono); color: #5f665d; margin-bottom: 14px; }
 .workspace-introduction h1 { font-size: clamp(16px, 1.3vw, 19px); font-weight: 450; line-height: 1.7; letter-spacing: -.035em; }
 .workspace.has-selection .workspace-introduction { opacity: 0; visibility: hidden; }
 .workspace-labels { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
 .workspace-labels button { position: absolute; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 7px 10px; background: #efeee9e6; color: #222a22; border: 0; border-radius: 30px; font-size: 14px; letter-spacing: -.025em; pointer-events: auto; white-space: nowrap; box-shadow: 0 2px 12px #efeee94d; visibility: hidden; }
-.workspace-labels button > span:last-child { margin-left: 12px; }
 .workspace-label-dot { width: 6px; height: 6px; border-radius: 50%; }
 .workspace-labels button:hover { background: #fafaf5; }
-.workspace-bottom { position: absolute; inset: auto 36px 53px; z-index: 5; }
-.workspace-gesture { display: flex; justify-content: space-between; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #20252228; font-size: 12px; color: #596252; }
-.workspace-gesture > span { font-size: 23px; line-height: .6; }
+.workspace-gesture { position: absolute; left: 36px; top: 12px; z-index: 3; color: #596252; font-size: 13px; pointer-events: none; }
+.workspace-bottom { position: absolute; inset: auto 36px 18px; z-index: 5; border-top: 1px solid var(--line); padding-top: 12px; }
 .workspace-chooser { display: flex; gap: 12px 40px; flex-wrap: wrap; }
 .workspace-chooser > button { display: flex; align-items: baseline; gap: 12px; min-height: 44px; padding: 0; border: 0; background: transparent; font-size: 15px; color: #5f675c; letter-spacing: -.025em; text-align: left; }
-.workspace-chooser button > span { font: 11px/1.5 var(--mono); color: #858b7f; }
 .workspace-chooser button[aria-pressed='true'], .workspace-chooser button:hover { color: #2347e6; }
 .workspace-chooser button[aria-pressed='true']::after { content: '↗'; font-size: 16px; margin-left: 4px; }
-.workspace-direct { position: absolute; inset: auto 36px 12px; display: flex; gap: 10px 20px; align-items: center; flex-wrap: wrap; font-size: 11px; color: #686f62; z-index: 5; }
-.workspace-direct a { min-height: 24px; display: inline-flex; align-items: center; }
+.workspace-direct { display: flex; flex-wrap: wrap; gap: 0 32px; color: var(--ink); }
+.workspace-direct a { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; font-size: 15px; }
+.workspace-direct a > span { color: #667062; }
 .workspace-direct a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .workspace-detail { position: absolute; z-index: 5; left: 6vw; top: 10%; width: min(500px, 43vw); outline: none; }
 .workspace-back { display: inline-flex; align-items: center; min-height: 44px; gap: 10px; padding: 0; border: 0; background: transparent; color: #5e6658; font-size: 13px; }
-.workspace-detail-kicker { font: 11px/1.5 var(--mono); letter-spacing: .035em; color: #717867; margin-top: 32px; }
 .workspace-detail h2 { font-size: clamp(40px, 4.4vw, 62px); font-weight: 500; letter-spacing: -.075em; line-height: 1.15; margin-top: 16px; overflow-wrap: break-word; }
 .workspace-description { margin-top: 23px; font-size: 15px; line-height: 1.9; color: #515b4d; word-break: keep-all; }
-.workspace-role { font-size: 12px; line-height: 1.85; color: #747d6b; margin-top: 17px; }
 .workspace-case-link { display: inline-flex; gap: 44px; align-items: center; min-height: 44px; border-bottom: 1px solid #252c24; margin-top: 26px; font-size: 14px; }
 .workspace-case-link:hover { color: #3156ff; border-color: #3156ff; }
 .workspace-play-controls { margin-top: 25px; font-size: 13px; }
@@ -56,7 +50,6 @@ body { background: var(--paper); }
 .workspace.is-fallback .spatial-stage { visibility: hidden; }
 .workspace.is-fallback .workspace-labels { display: none; }
 .workspace.is-fallback.has-selection .workspace-loading-shape { opacity: .25; }
-.workspace.is-fallback .workspace-introduction { bottom: 170px; }
 @media (min-width: 1800px) { .workspace-detail { left: 9vw; } .workspace-word { font-size: 32vw; top: -2%; } }
 @media (max-width: 1100px) { .workspace-detail { left: 36px; } .workspace-chooser { gap: 10px 24px; } }
 @media (max-width: 767px) {
@@ -65,27 +58,20 @@ body { background: var(--paper); }
  .workspace-header nav a { font-size: 13px; }
  .workspace { height: calc(100svh - 80px); min-height: 780px; scroll-margin-top: 80px; }
  .workspace-anchor { scroll-margin-top: 80px; }
- .workspace-topline { inset: 4px 20px auto; font-size: 10px; }
- .workspace-topline > span:last-child { display: none; }
  .workspace-word { font-size: 43vw; top: 10%; }
- .workspace-introduction { left: 20px; bottom: 214px; max-width: 300px; }
+ .workspace-introduction { left: 20px; bottom: 130px; max-width: 300px; }
  .workspace-introduction > p { font-size: 10px; margin-bottom: 9px; }
  .workspace-introduction h1 { font-size: 14px; }
- .workspace-bottom { inset: auto 20px 85px; }
- .workspace-gesture { margin-bottom: 8px; padding-bottom: 12px; }
+ .workspace-gesture { left: 20px; top: 10px; font-size: 12px; }
+ .workspace-bottom { inset: auto 20px 12px; padding-top: 6px; }
  .workspace-chooser { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 12px; }
  .workspace-chooser > button { font-size: 13px; min-height: 40px; gap: 8px; word-break: keep-all; }
- .workspace-chooser button > span { font-size: 10px; }
- .workspace-direct { inset: auto 20px 10px; gap: 1px 14px; font-size: 10px; }
- .workspace-direct > span { width: 100%; }
- .workspace-direct a { min-height: 25px; }
+ .workspace-direct { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
+ .workspace-direct a { min-width: 0; font-size: 13px; word-break: keep-all; }
  .workspace-labels button { font-size: 12px; min-height: 40px; padding: 7px 9px; }
- .workspace-labels { display: none; }
  .workspace-detail { left: 20px; right: 20px; top: auto; bottom: 220px; width: auto; max-width: none; }
- .workspace-detail-kicker { margin-top: 9px; font-size: 10px; }
  .workspace-detail h2 { font-size: 39px; margin-top: 9px; }
  .workspace-description { margin-top: 13px; font-size: 13px; line-height: 1.8; }
- .workspace-role { font-size: 11px; margin-top: 9px; }
  .workspace-case-link { margin-top: 13px; font-size: 13px; }
  .workspace-back { font-size: 12px; }
  .workspace-play-controls { margin-top: 14px; }

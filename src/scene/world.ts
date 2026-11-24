@@ -8,7 +8,6 @@ type Options = {
   labels: HTMLElement;
   reduced: boolean;
   onSelect: (id: string) => void;
-  onInteract: () => void;
   onTwist: (value: number) => void;
   onError: () => void;
 };
@@ -154,14 +153,18 @@ export function createWorld(options: Options): WorldController {
       exhibit.scale = work.scale * Math.min(1, halfWidth / 3.5);
       if (mobile) exhibit.position.y += .38;
     }
+    const ribbon = getExhibit('ribbon')!;
+    const letters = getExhibit('type')!;
     if (mobile) {
-      getExhibit('ribbon')!.position.set(-.5, 1, .1);
-      getExhibit('type')!.position.set(.5, -1.25, -.2);
-      getExhibit('type')!.scale = .65;
+      ribbon.position.set(-halfWidth * .2, 2, .1);
+      letters.position.set(halfWidth * .08, -.95, -.2);
+      ribbon.scale = Math.min(1.05, halfWidth * .4);
+      letters.scale = Math.min(.8, halfWidth * .28);
     } else {
-      getExhibit('ribbon')!.position.set(-2, .2, .2);
-      getExhibit('type')!.position.set(1.8, -.1, -.1);
-      getExhibit('type')!.scale = .85;
+      ribbon.position.set(-2.75 * spread, .45, .2);
+      letters.position.set(2.45 * spread, -.45, -.2);
+      ribbon.scale = 1.05;
+      letters.scale = Math.min(.85, halfWidth / 5);
     }
     if (!entered) {
       for (const exhibit of exhibits) {
@@ -177,13 +180,16 @@ export function createWorld(options: Options): WorldController {
   function placeLabels() {
     for (const el of labels.querySelectorAll<HTMLElement>('[data-anchor]')) {
       const e = getExhibit(el.dataset.anchor!);
-      if (!e || e.mode !== mode || selected) { el.style.visibility = 'hidden'; continue; }
+      if (!e || e.mode !== mode || selected) continue;
       projected.copy(e.sculpture.group.position);
       projected.y -= e.id === 'type' ? 1 : 1.35 * e.scale;
       projected.project(camera);
       el.style.left = `${(projected.x + 1) * .5 * width}px`;
-      el.style.top = `${(-projected.y + 1) * .5 * height}px`;
-      el.style.visibility = projected.z < 1 && Math.abs(projected.x) < .9 && Math.abs(projected.y) < .82 ? 'visible' : 'hidden';
+      el.style.top = `${(-projected.y + 1) * .5 * height + (mobile ? 11 : 0)}px`;
+      // The work overview has a fixed camera. Keeping its labels focusable also
+      // restores keyboard focus as the close-up transitions back to the overview.
+      const inView = projected.z < 1 && Math.abs(projected.x) < .9 && Math.abs(projected.y) < .82;
+      el.style.visibility = mode === 'work' || inView ? 'visible' : 'hidden';
     }
   }
   function render(now: number) {
@@ -269,7 +275,6 @@ export function createWorld(options: Options): WorldController {
     if (event.pointerType === 'touch' && !pointer.moved && Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)) { resetPointer(); return; }
     if (!pointer.moved && Math.hypot(dx, dy) <= 7) return;
     pointer.moved = true;
-    options.onInteract();
     canvas.classList.add('is-dragging');
     if (pointer.letter && pointer.letterStart && pointer.planeStart) {
       point(event);
@@ -312,7 +317,7 @@ export function createWorld(options: Options): WorldController {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home'].includes(event.key)) return;
     if (mode === 'work' && !selected) return;
     event.preventDefault();
-    resetPointer(); velocity = 0; options.onInteract();
+    resetPointer(); velocity = 0;
     const active = getExhibit(selected);
     if (event.key === 'Home') {
       yaw = -.06; pitch = .12;

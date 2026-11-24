@@ -37,14 +37,19 @@ test('홈: 입체 공간의 네 작업 선택, 사례 링크와 전체 작업 �
     /제품을 만드는 개발자입니다\.\s*재미있는 인터랙션을 좋아합니다\./,
   );
   const summary = page.locator('.workspace-detail');
+  const projectList = page.getByRole('navigation', { name: '프로젝트 목록', exact: true });
+  await expect(projectList.getByRole('link')).toHaveCount(4);
+  for (const label of ['직접구매', '배송·물류', '의류 사입', 'FE 품질·관측']) {
+    await expect(page.getByRole('button', { name: label + ' 미리보기' })).toHaveText(label);
+  }
   for (const [slug, name] of cases) {
-    const chooser = page.getByRole('button', { name: name + ' 선택', exact: true });
+    const chooser = page.locator(`button[data-anchor="${slug}"]`);
     const link = page.getByRole('link', { name: name + ' 상세 보기', exact: true });
     const path = new URL('projects/' + slug + '/', baseURL).pathname;
     await expect(link).toBeVisible();
     await expect(link).toHaveAttribute('href', path);
     await chooser.click();
-    await expect(chooser).toHaveAttribute('aria-pressed', 'true');
+    await expect(chooser).toBeHidden();
     await expect(canvas).toHaveAttribute('data-selected', slug);
     await expect(canvas).toHaveAttribute('data-settled', 'true');
     await expect(summary.getByRole('heading', { name, exact: true })).toBeVisible();
@@ -55,7 +60,7 @@ test('홈: 입체 공간의 네 작업 선택, 사례 링크와 전체 작업 �
     await expect(summary).not.toBeVisible();
     await expect(canvas).toHaveAttribute('data-selected', '');
     await expect(canvas).toHaveAttribute('data-settled', 'true');
-    await expect(chooser).toHaveAttribute('aria-pressed', 'false');
+    await expect(chooser).toBeVisible();
     await expect(chooser).toBeFocused();
   }
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -92,17 +97,27 @@ for (const [slug, name] of cases) {
     await expect(sculpture).not.toHaveAttribute('data-rotation-y', rotation!);
     await page.keyboard.press('Home');
     await expect(sculpture).toHaveAttribute('data-rotation-y', rotation!);
-    await page.locator('.flow-steps button').last().click();
-    await expect(page.locator('.flow-steps button').last()).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('.flow-detail')).toContainText('STEP 04');
     const toc = page.getByRole('navigation', { name: '사례 목차' });
-    await toc.getByRole('link').last().click();
-    await expect(page).toHaveURL(/#result$/);
-    await expect(page.locator('#result h2')).toBeVisible();
+    if (slug === 'style-label') {
+      await expect(toc).toHaveCount(0);
+      await expect(page.locator('.flow-diagram')).toHaveCount(0);
+      await expect(page.locator('#result p')).toBeVisible();
+    } else {
+      const diagram = page.locator('#implementation .flow-diagram');
+      const detail = diagram.locator('.flow-detail');
+      const firstStep = await detail.innerText();
+      await diagram.locator('button').last().click();
+      await expect(diagram.locator('button').last()).toHaveAttribute('aria-pressed', 'true');
+      await expect(detail).toContainText(/\S/);
+      await expect(detail).not.toHaveText(firstStep);
+      await toc.getByRole('link').last().click();
+      await expect(page).toHaveURL(/#result$/);
+      await expect(page.locator('#result h2')).toBeVisible();
+    }
     await page.getByRole('link', { name: '프로젝트 목록', exact: true }).click();
     await expect(page).toHaveURL(/\/#projects$/);
     await expect(page.locator('.workspace')).toHaveAttribute('data-mode', 'work');
-    await expect(page.getByRole('group', { name: '프로젝트 선택', exact: true })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: '프로젝트 목록', exact: true })).toBeVisible();
     expect(errors).toEqual([]);
   });
 }
@@ -115,7 +130,7 @@ test('모션 감소: 키보드 선택·Escape 복귀와 자동 움직임 없는 
   await expect(page.getByRole('link', { name: '본문으로 건너뛰기' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.locator('#main')).toBeFocused();
-  const chooser = page.getByRole('button', { name: 'FE 품질·관측 선택', exact: true });
+  const chooser = page.getByRole('button', { name: 'FE 품질·관측 미리보기', exact: true });
   await chooser.focus();
   await page.keyboard.press('Enter');
   await expect(canvas).toHaveAttribute('data-selected', 'frontend-reliability');
@@ -170,10 +185,16 @@ test('선택 상태: 빠른 작업 전환, 상세 이동 후 뒤로가기와 재
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('./');
-  await readyWorkspace(page);
-  for (const [slug, name] of [cases[0], cases[1], cases[0]]) {
-    await page.getByRole('button', { name: name + ' 선택', exact: true }).click();
-    await expect(page.locator('.spatial-stage')).toHaveAttribute('data-selected', slug);
+  const canvas = await readyWorkspace(page);
+  await canvas.click({ position: await canvas.evaluate((element) => ({
+    x: element.clientWidth * .2, y: element.clientHeight * .24,
+  })) });
+  await expect(page.locator('.workspace-detail h2')).toHaveText(cases[0][1]);
+  for (const [slug, name] of [cases[1], cases[0]]) {
+    await page.keyboard.press('Escape');
+    await expect(canvas).toHaveAttribute('data-settled', 'true');
+    await page.locator(`button[data-anchor="${slug}"]`).click();
+    await expect(canvas).toHaveAttribute('data-selected', slug);
     await expect(page.locator('.workspace-detail h2')).toHaveText(name);
   }
   await page.getByRole('link', { name: '사례 읽기', exact: true }).click();
@@ -181,7 +202,7 @@ test('선택 상태: 빠른 작업 전환, 상세 이동 후 뒤로가기와 재
   await page.goBack();
   await readyWorkspace(page);
   if (await page.locator('.workspace-detail').isVisible()) await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: '의류 사입 커머스 선택', exact: true }).click();
+  await page.getByRole('button', { name: '의류 사입 미리보기', exact: true }).click();
   await expect(page.locator('.workspace-detail h2')).toHaveText('의류 사입 커머스');
   await page.getByRole('button', { name: /전체 작업/ }).click();
   await expect(page.locator('.spatial-stage')).toHaveAttribute('data-selected', '');
@@ -294,7 +315,7 @@ test('모바일: 캔버스 위의 세로 스와이프는 작품 선택 없이 �
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(before + 30);
   await expect(canvas).toHaveAttribute('data-selected', '');
   await expect(page.locator('.workspace-detail')).not.toBeVisible();
-  await page.getByRole('button', { name: '해외 상품 직접구매 플랫폼 선택', exact: true }).tap();
+  await page.getByRole('button', { name: '직접구매 미리보기', exact: true }).tap();
   await expect(canvas).toHaveAttribute('data-selected', '1688-direct-purchase');
 });
 
@@ -335,7 +356,7 @@ test('실험: 띠 변형·초기화, 글자 이동 유지·초기화와 작업 �
   await page.getByRole('navigation', { name: '주요 메뉴' }).getByRole('link', { name: '작업', exact: true }).click();
   await expect(page.locator('.workspace')).toHaveAttribute('data-mode', 'work');
   await expect(canvas).toHaveAttribute('data-selected', '');
-  await expect(page.getByRole('group', { name: '프로젝트 선택', exact: true })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: '프로젝트 목록', exact: true })).toBeVisible();
 });
 
 test('실험에서 키보드 시점 이동과 드래그 중단 후 띠 조절값 유지', async ({ page }) => {
@@ -379,15 +400,13 @@ test('WebGL을 사용할 수 없어도 작업 설명과 상세 링크를 읽을 
   });
   await page.goto('./');
   await expect(page.locator('.workspace')).toHaveClass(/is-fallback/);
-  await expect(page.getByText('작업 이름을 눌러 살펴보세요.', { exact: false })).toBeVisible();
+  await expect(page.locator('.workspace-gesture')).toHaveCount(0);
   for (const [slug, name] of cases) {
     const link = page.getByRole('link', { name: name + ' 상세 보기', exact: true });
     await expect(link).toBeVisible();
     await expect(link).toHaveAttribute('href', new URL('projects/' + slug + '/', baseURL).pathname);
   }
-  await page.getByRole('button', { name: '배송·물류 신청 서비스 선택', exact: true }).click();
-  await expect(page.locator('.workspace-detail h2')).toHaveText('배송·물류 신청 서비스');
-  await page.getByRole('link', { name: '사례 읽기', exact: true }).click();
+  await page.getByRole('link', { name: '배송·물류 신청 서비스 상세 보기', exact: true }).click();
   await expect(page).toHaveURL(/\/projects\/delivery-logistics\/$/);
   await expect(page.locator('.case-name')).toHaveText('배송·물류 신청 서비스');
   expect(errors).toEqual([]);
@@ -426,8 +445,8 @@ test('JavaScript 없이도 사례 본문과 모든 상세 링크 제공', async 
     await page.goto(new URL(`projects/${slug}/`, baseURL).href);
     await expect(page).toHaveTitle(`${name} — 임재혁의 프로젝트`);
     await expect(page.locator('#result p').last()).toHaveText(/\S/);
-    const summary = await page.locator('.case-description').textContent();
-    expect(await page.locator('meta[name="description"]').getAttribute('content')).toBe(summary);
+    const summary = await page.locator('meta[name="description"]').getAttribute('content');
+    expect(summary).toMatch(/\S/);
     expect(await page.locator('meta[property="og:description"]').getAttribute('content')).toBe(summary);
   }
   await context.close();

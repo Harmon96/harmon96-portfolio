@@ -58,7 +58,6 @@ export function Layout({ children, base, home = false }: { children: ReactNode; 
             {profile.name}
             <span className="mono"> / {profile.role}</span>
           </a>
-          <p>제품을 만드는 개발자입니다. 재미있는 인터랙션을 좋아합니다.</p>
         </div>
         <div className="footer-links">
           {profile.links

@@ -150,7 +150,7 @@ export function WaterIntro() {
           <span className="water-signature" aria-hidden="true">임재혁 <span>Portfolio</span></span>
           <button className="water-skip" type="button" onClick={enter}>건너뛰기 <span aria-hidden="true">↗</span></button>
           <div className="water-prompt">
-            <h2 id="water-title">물방울을 떨어뜨려 주세요</h2>
+            <h2 id="water-title">물방울을 세 번 떨어뜨려 주세요</h2>
             <p lang="en">Touch the water three times to enter.</p>
             <div className="water-count" aria-hidden="true">
               {[1, 2, 3].map((n) => <i key={n} data-filled={drops.length >= n} />)}

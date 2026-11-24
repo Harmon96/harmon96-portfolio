@@ -18,13 +18,12 @@ export function SpatialWorkspace({ base }: { base: string }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [interacted, setInteracted] = useState(false);
   const [twist, setTwist] = useState(35);
   const [letterIndex, setLetterIndex] = useState(0);
   const reduced = useReducedMotion();
   const reducedRef = useRef(reduced);
   reducedRef.current = reduced;
-  const didInteract = useRef(false);
+  const returnFocus = useRef<HTMLElement | null>(null);
   const summary = useRef<HTMLElement>(null);
   const chooser = useRef<HTMLDivElement>(null);
   const selectedProject = projects.find((project) => project.slug === selected);
@@ -38,9 +37,8 @@ export function SpatialWorkspace({ base }: { base: string }) {
         controller.current = createWorld({
           canvas: canvas.current, labels: labels.current, reduced: reducedRef.current,
           onSelect: setSelected,
-          onInteract: () => { if (!didInteract.current) { didInteract.current = true; setInteracted(true); } },
           onTwist: setTwist,
-          onError: () => { controller.current?.dispose(); controller.current = null; setFailed(true); setReady(false); },
+          onError: () => { controller.current?.dispose(); controller.current = null; setFailed(true); setReady(false); setSelected(null); },
         });
         setReady(true);
       } catch {
@@ -65,14 +63,16 @@ export function SpatialWorkspace({ base }: { base: string }) {
   }, []);
   useEffect(() => {
     if (selected) {
-      // Small browser viewports may scroll the chooser into view before selection.
-      // Bring the actual artwork back below the fixed header before revealing its copy.
+      // Keep the sculpture visible after a mobile tap lower down the gallery.
       if (matchMedia('(max-width: 767px)').matches) {
         const section = canvas.current?.closest('section');
         const headerHeight = document.querySelector('header')?.getBoundingClientRect().height ?? 80;
         if (section) window.scrollTo({ top: section.getBoundingClientRect().top + window.scrollY - headerHeight, behavior: 'instant' });
       }
       summary.current?.focus({ preventScroll: true });
+    } else if (returnFocus.current) {
+      returnFocus.current.focus({ preventScroll: true });
+      returnFocus.current = null;
     }
     const close = (event: KeyboardEvent) => { if (event.key === 'Escape' && selected) clearSelection(); };
     window.addEventListener('keydown', close);
@@ -80,9 +80,10 @@ export function SpatialWorkspace({ base }: { base: string }) {
   }, [selected]);
 
   function clearSelection() {
-    const previous = selected;
+    returnFocus.current = mode === 'work'
+      ? labels.current?.querySelector<HTMLButtonElement>(`[data-anchor="${selected}"]`) ?? null
+      : chooser.current?.querySelector<HTMLButtonElement>(`[data-work="${selected}"]`) ?? null;
     setSelected(null);
-    chooser.current?.querySelector<HTMLButtonElement>(`[data-work="${previous}"]`)?.focus({ preventScroll: true });
   }
   function resetPlay() { setTwist(35); controller.current?.resetPlay(); }
   function moveLetter(direction: 'left' | 'right' | 'up' | 'down') {
@@ -98,10 +99,22 @@ export function SpatialWorkspace({ base }: { base: string }) {
       </div>
       <canvas ref={canvas} className="spatial-stage" tabIndex={ready ? 0 : -1} role="img" aria-describedby="workspace-keyboard-guide" aria-label={mode === 'work' ? '작품을 잡아 돌려보는 전시장' : '직접 조작하는 입체 실험 공간'} data-ready="false" data-view-yaw="0" />
       <span className="sr-only" id="workspace-keyboard-guide">{mode === 'work' ? '작품을 선택한 뒤 캔버스에서 방향키로 돌릴 수 있습니다. Home 키로 작품을 처음 방향으로 돌립니다.' : '방향키로 실험 공간을 돌리고 Home 키로 처음 방향으로 돌아갑니다. 띠를 선택하면 좌우 방향키로 비틀 수 있습니다.'}</span>
-      <div className="workspace-topline"><span>{mode === 'work' ? 'SELECTED WORK / 01—04' : 'SMALL EXPERIMENTS / 01—02'}</span><span>임재혁의 작업과 실험</span></div>
-      <div className="workspace-labels" ref={labels}>
-        {spatialWorks.map((item) => <button type="button" data-anchor={item.slug} key={item.slug} aria-label={`${projects.find((p) => p.slug === item.slug)!.name} 작품 보기`} onClick={() => setSelected(item.slug)}><span className="workspace-label-dot" style={{ background: item.color }} /><span>{item.shortName}</span><span aria-hidden="true">↗</span></button>)}
-        {playItems.map((item) => <button type="button" data-anchor={item.id} key={item.id} onClick={() => setSelected(item.id)}>{item.title}<span aria-hidden="true">↗</span></button>)}
+      {ready && !selected && (
+        <p className="workspace-gesture">
+          {mode === 'work' ? '드래그해 회전 · 눌러서 보기' : '작품을 눌러 실험해 보세요.'}
+        </p>
+      )}
+      <div className="workspace-labels" ref={labels} hidden={!ready || !!selected}>
+        {mode === 'work' ? spatialWorks.map((item) => (
+          <button type="button" data-anchor={item.slug} key={item.slug}
+            aria-label={`${item.shortName} 미리보기`} onClick={() => setSelected(item.slug)}>
+            <span className="workspace-label-dot" aria-hidden="true" style={{ background: item.color }} />
+            {item.shortName}
+          </button>
+        )) : playItems.map((item) => (
+          <button type="button" data-anchor={item.id} key={item.id}
+            onClick={() => setSelected(item.id)}>{item.title}</button>
+        ))}
       </div>
       <div className="workspace-introduction">
         <p>{profile.role}</p>
@@ -110,10 +123,9 @@ export function SpatialWorkspace({ base }: { base: string }) {
       {selected && (
         <aside className="workspace-detail" ref={summary} tabIndex={-1} aria-labelledby="workspace-detail-title">
           <button type="button" className="workspace-back" aria-label={`전체 ${mode === 'work' ? '작업' : '실험'}`} onClick={clearSelection}>← 전체 {mode === 'work' ? '작업' : '실험'}</button>
-          <p className="workspace-detail-kicker">{selectedProject ? `SELECTED WORK / ${selectedProject.number}` : 'PLAY WITH IT'}</p>
           <h2 id="workspace-detail-title">{selectedProject?.name ?? selectedPlay?.title}</h2>
           <p className="workspace-description">{selectedProject?.description ?? selectedPlay?.description}</p>
-          {selectedProject && <><p className="workspace-role">{selectedProject.role}</p><a className="workspace-case-link" href={hrefFor(projectPath(selectedProject.slug), base)}>사례 읽기 <span aria-hidden="true">↗</span></a></>}
+          {selectedProject && <a className="workspace-case-link" href={hrefFor(projectPath(selectedProject.slug), base)}>사례 읽기 <span aria-hidden="true">↗</span></a>}
           {selectedPlay && ready && <div className="workspace-play-controls">
             {selected === 'ribbon' && <label>띠 비틀기<input type="range" min="0" max="100" value={twist} onChange={(event) => { const next = Number(event.target.value); setTwist(next); controller.current?.setTwist(next); }} /></label>}
             {selected === 'type' && <div className="letter-controls"><label>움직일 글자<select value={letterIndex} onChange={(event) => setLetterIndex(Number(event.target.value))}>{['P', 'L', 'A', 'Y'].map((letter, i) => <option key={letter} value={i}>{letter}</option>)}</select></label><div className="letter-directions"><button type="button" aria-label="글자 왼쪽으로" onClick={() => moveLetter('left')}>←</button><button type="button" aria-label="글자 오른쪽으로" onClick={() => moveLetter('right')}>→</button><button type="button" aria-label="글자 위로" onClick={() => moveLetter('up')}>↑</button><button type="button" aria-label="글자 아래로" onClick={() => moveLetter('down')}>↓</button></div></div>}
@@ -123,12 +135,26 @@ export function SpatialWorkspace({ base }: { base: string }) {
         </aside>
       )}
       <div className="workspace-bottom">
-        <p className="workspace-gesture">{failed ? '작업 이름을 눌러 살펴보세요.' : interacted ? '원하는 작업을 선택해보세요.' : mode === 'work' ? '작품을 드래그해 돌려보세요.' : '드래그해서 둘러보세요.'}<span aria-hidden="true">↔</span></p>
-        <div className="workspace-chooser" ref={chooser} role="group" aria-label={mode === 'work' ? '프로젝트 선택' : '실험 선택'}>
-          {mode === 'work' ? projects.map((project) => <button type="button" key={project.slug} data-work={project.slug} aria-label={`${project.name} 선택`} aria-pressed={selected === project.slug} onClick={() => setSelected(project.slug)}><span>{project.number}</span>{project.name}</button>) : playItems.map((item, i) => <button type="button" key={item.id} data-work={item.id} aria-label={item.title} aria-pressed={selected === item.id} onClick={() => setSelected(item.id)}><span>0{i + 1}</span>{item.title}</button>)}
-        </div>
+        {mode === 'work' ? (
+          <nav className="workspace-direct" aria-label="프로젝트 목록">
+            {projects.map((project) => (
+              <a key={project.slug} href={hrefFor(projectPath(project.slug), base)}
+                aria-label={`${project.name} 상세 보기`}>
+                {project.name}<span aria-hidden="true">↗</span>
+              </a>
+            ))}
+          </nav>
+        ) : (
+          <div className="workspace-chooser" ref={chooser} role="group" aria-label="실험 선택">
+            {playItems.map((item) => (
+              <button type="button" key={item.id} data-work={item.id}
+                aria-pressed={selected === item.id} onClick={() => setSelected(item.id)}>
+                {item.title}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      <div className="workspace-direct"><span>바로 읽기</span>{projects.map((project) => <a key={project.slug} href={hrefFor(projectPath(project.slug), base)} aria-label={`${project.name} 상세 보기`}>{project.name} ↗</a>)}</div>
     </section>
   );
 }

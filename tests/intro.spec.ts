@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test('첫 방문에 세 번 물방울을 떨어뜨리면 전시장이 열리고 재방문은 바로 진입한다', async ({ page, isMobile }) => {
   await page.goto('./');
-  const dialog = page.getByRole('dialog', { name: '물방울을 떨어뜨려 주세요' });
+  const dialog = page.getByRole('dialog', { name: '물방울을 세 번 떨어뜨려 주세요' });
   const water = dialog.getByRole('button', { name: '물방울 떨어뜨리기' });
   await expect(dialog).toBeVisible();
   const trail = dialog.locator('.water-trail span');

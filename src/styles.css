@@ -1021,7 +1021,7 @@
   }
   .case-name {
     font-size: 15px;
-    margin-top: 20px;
+    margin-top: 28px;
     color: var(--blue-ink);
   }
   .case-header h1 {
@@ -1032,11 +1032,11 @@
     margin-top: 10px;
   }
   .case-description {
-    max-width: 650px;
-    color: var(--muted);
-    line-height: 1.9;
-    margin-top: 25px;
-    font-size: 16px;
+    max-width: 44rem;
+    color: var(--ink);
+    line-height: 1.75;
+    margin-top: 20px;
+    font-size: 18px;
   }
   .case-meta {
     display: grid;
@@ -1052,23 +1052,61 @@
     margin-bottom: 7px;
   }
   .case-meta dd {
-    font-size: 13px;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .case-note {
+    padding-block: 20px 48px;
+    font-size: 17px;
+    line-height: 1.75;
+  }
+  .case-note p {
+    max-width: 44rem;
   }
   .case-flow {
-    margin-top: 18px;
+    margin-top: 24px;
   }
   .case-flow .flow-diagram {
-    padding: 28px 38px 20px;
+    padding: 24px;
+  }
+  .case-flow figcaption {
+    text-align: left;
+    margin: 0 0 16px;
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .case-flow .flow-steps button {
+    height: 100%;
+    min-height: 80px;
+    justify-content: center;
+    gap: 4px;
+    padding: 12px;
+  }
+  .case-flow .flow-label {
+    font-size: 15px;
+    white-space: normal;
+  }
+  .case-flow .flow-note {
+    margin: 0;
+    color: #45526a;
   }
   .case-flow .flow-detail {
-    min-height: 52px;
+    display: block;
+    min-height: 0;
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+  .case-flow .flow-detail p {
+    color: var(--ink);
+    font-size: 16px;
+    line-height: 1.7;
   }
   .case-body {
     display: grid;
-    grid-template-columns: 240px minmax(0, 720px);
-    justify-content: space-between;
-    gap: 68px;
-    padding-block: 70px 80px;
+    grid-template-columns: minmax(170px, 230px) minmax(0, 720px);
+    gap: clamp(36px, 6vw, 88px);
+    padding-block: 40px 64px;
   }
   .case-toc nav {
     position: sticky;
@@ -1079,7 +1117,7 @@
   }
   .case-toc a {
     display: block;
-    font-size: 12px;
+    font-size: 14px;
     color: var(--muted);
     padding: 10px 0 10px 14px;
     border-left: 1px solid var(--line);
@@ -1092,20 +1130,25 @@
     border-color: var(--blue);
   }
   .case-article section {
-    margin-bottom: 60px;
+    margin-bottom: 44px;
+  }
+  .case-article section:last-child {
+    margin-bottom: 0;
   }
   .case-article h2 {
     font-size: 28px;
     letter-spacing: -0.035em;
     font-weight: 600;
-    margin: 14px 0 22px;
-    line-height: 1.5;
+    margin: 0 0 16px;
+    line-height: 1.4;
   }
-  .case-article section > p:not(.eyebrow) {
-    color: var(--muted);
-    font-size: 15px;
-    line-height: 1.95;
-    margin-top: 16px;
+  .case-article section > p {
+    color: var(--ink);
+    font-size: 17px;
+    line-height: 1.75;
+  }
+  .case-article section > p + p {
+    margin-top: 12px;
   }
   .scope-list {
     padding-left: 20px;
@@ -1374,19 +1417,15 @@
     }
     .case-toc nav {
       position: static;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
     }
     .case-toc .eyebrow {
       width: 100%;
       margin-bottom: 8px;
     }
     .case-toc a {
-      border: 1px solid var(--line);
-      padding: 7px 12px;
-      border-radius: 3px;
-      font-size: 11px;
+      padding: 6px 12px;
+      font-size: 14px;
+      line-height: 1.6;
     }
     .case-flow .flow-diagram {
       padding-inline: 24px;
@@ -1507,9 +1546,6 @@
       padding: 10px;
       min-height: 73px;
     }
-    .flow-label {
-      font-size: 12px;
-    }
     .flow-note {
       font-size: 9px;
     }
@@ -1517,13 +1553,6 @@
       top: 3px;
       right: 6px;
       font-size: 12px;
-    }
-    .flow-detail {
-      gap: 8px;
-      grid-template-columns: 48px 1fr;
-    }
-    .flow-detail p {
-      font-size: 11px;
     }
     .preview-copy h3 {
       font-size: 21px;
@@ -1579,17 +1608,23 @@
     .case-header h1 {
       font-size: 33px;
     }
-    .case-description {
-      font-size: 14px;
+    .case-description,
+    .case-article section > p,
+    .case-note {
+      font-size: 16px;
+      line-height: 1.7;
     }
-    .case-meta dd {
-      font-size: 12px;
+    .case-meta {
+      margin-top: 24px;
+      padding-block: 16px;
+      gap: 12px;
     }
     .case-article h2 {
       font-size: 25px;
     }
-    .case-article section > p:not(.eyebrow) {
-      font-size: 14px;
+    .case-body {
+      padding-block: 24px 40px;
+      gap: 28px;
     }
     .next-case > a:not(.text-link) {
       font-size: 26px;

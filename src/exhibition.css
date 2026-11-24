@@ -36,13 +36,12 @@
 .exhibition-careers article p, .exhibition-careers article > span { font-size: 12px; line-height: 1.8; color: var(--muted); }
 .exhibition-careers article > span { font-family: var(--mono); }
 .exhibition-careers .career-description { grid-column: 1 / -1; }
-.about-story .exhibition-writing-note { font-size: 12px; margin-top: 28px; }
 .site-footer { gap: 30px; }
 .footer-links { flex-wrap: wrap; row-gap: 8px; }
 .footer-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px; }
 .footer-name .mono { font-size: 12px; }
 .site-footer p { max-width: 440px; }
-.case-meta dt, .flow-diagram figcaption, .diagram-hint, .flow-note, .flow-node, .diagram-heading .mono, .flow-detail > .mono { font-size: 12px; }
+.case-meta dt, .flow-note { font-size: 13px; }
 @media (max-width: 1100px) {
   .exhibition-home, .exhibition-about { gap: 36px; }
   .exhibition-intro h1 { font-size: 30px; }

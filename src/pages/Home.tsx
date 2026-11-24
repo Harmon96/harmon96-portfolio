@@ -19,7 +19,7 @@ export function Home({ base }: { base: string }) {
           </div>
         </div>
         <div className="about-story">
-          <p className="about-lead" data-reveal>상품을 고르고, 결제하고, 배송을 기다리는 과정.<br />그 사이의 화면과 흐름을 만들어왔습니다.</p>
+          <p className="about-lead" data-reveal>상품을 고르는 화면부터 결제하고 배송을 신청하는 화면까지 만들었습니다.</p>
           <p data-reveal>{profile.introduction}</p>
           <details className="about-more">
             <summary>일하는 방식<span aria-hidden="true">+</span></summary>
@@ -28,7 +28,7 @@ export function Home({ base }: { base: string }) {
                 <h3>{principle.title}</h3><p>{principle.text}</p>
               </div>
             ))}
-            <p>AI는 코드 탐색과 수정안 검토에 활용합니다. 수정 범위는 직접 정하고, 테스트한 내용과 아직 확인하지 못한 내용을 구분해 기록합니다.</p>
+            <p>코드를 찾거나 수정안을 검토할 때는 AI를 씁니다. 수정 범위는 제가 정합니다.</p>
           </details>
           <div className="exhibition-careers">
             <h3 className="section-kicker">경력</h3>
@@ -40,7 +40,6 @@ export function Home({ base }: { base: string }) {
               </article>
             ))}
           </div>
-          <p className="exhibition-writing-note" data-reveal>기술 글은 Velog에 기록하고 있습니다. 이곳에는 작업과 실험을 모읍니다.</p>
         </div>
       </section>
     </>
