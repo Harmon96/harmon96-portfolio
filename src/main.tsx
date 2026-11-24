@@ -7,6 +7,11 @@ import './exhibition.css';
 import './components/case-sculpture.css';
 import './spatial.css';
 import './components/water-intro.css';
+import './themes.css';
+import './editions.css';
+import './theme-picker.css';
+import './typography.css';
+import './rotation.css';
 
 const base = import.meta.env.BASE_URL;
 const path = localPath(window.location.pathname, base);

@@ -52,18 +52,15 @@ export function ProjectPage({ project, base }: { project: Project; base: string 
           <Arrow direction="left" />
           프로젝트 목록
         </a>
-        <p className="case-name">{project.name}</p>
+        {project.title && <p className="case-name">{project.name}</p>}
         <h1>
-          {project.title.split('\n').map((line, index) => (
-            <span key={line}>
-              {index > 0 && <br />}
-              {line}
-            </span>
+          {(project.title ?? project.name).split('\n').map(line => (
+            <span className="case-title-line" key={line}>{line}</span>
           ))}
         </h1>
         {project.kind === 'case' && (
           <>
-            <p className="case-description">{project.lead}</p>
+            <p className="case-description">{project.lead ?? project.description}</p>
             <dl className="case-meta">
               <div><dt>담당 범위</dt><dd>{project.role}</dd></div>
               <div><dt>결과</dt><dd>{project.milestone}</dd></div>

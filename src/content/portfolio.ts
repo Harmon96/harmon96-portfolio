@@ -11,7 +11,7 @@ type ProjectInfo = {
   slug: string;
   number: string;
   name: string;
-  title: string;
+  title?: string;
   description: string;
   role: string;
   questions: string[];
@@ -19,7 +19,7 @@ type ProjectInfo = {
 
 export type CaseStudy = ProjectInfo & {
   kind: 'case';
-  lead: string;
+  lead?: string;
   milestone: string;
   flow: DecisionFlow;
   sections: CaseSection[];
@@ -32,7 +32,7 @@ export const profile = {
   handle: 'Harmon',
   role: 'Product Engineer & Creative Developer',
   introduction:
-    '큰 디자인 틀에서 세부 동작을 정하고, 프론트엔드 구현과 출시 후 운영까지 맡아 왔습니다. 구매·물류의 상태와 예외를 정리하고, 오류가 생기면 사용자 행동과 코드에서 원인을 좁힙니다.',
+    '슈퍼레이블에서 프론트엔드 개발자로 일합니다. 해외 상품 직접구매 서비스는 주문 화면 기획부터 출시 후 운영까지 맡았습니다.',
   links: [
     { label: 'GitHub', href: 'https://github.com/Harmon96' },
     { label: 'Velog', href: 'https://velog.io/@harmon/posts' },
@@ -44,30 +44,30 @@ export const profile = {
       period: '2024.10 입사',
       role: 'Frontend Engineer',
       description:
-        '해외 상품 직접구매 플랫폼의 프론트엔드를 맡았습니다. 배송·물류 신청 서비스를 만들고 의류 사입 커머스의 상품 탐색과 주문·결제 화면을 개발했습니다.',
+        '해외 상품 직접구매 플랫폼의 프론트엔드를 맡았습니다. 배송 신청 서비스에서는 상품 등록부터 출고 신청까지, 의류 사입 서비스에서는 상품 탐색부터 주문·결제까지 개발했습니다.',
     },
     {
       company: 'EIPGRID',
       period: '2021.12 — 2024.10',
       role: 'Frontend Engineer',
       description:
-        '에너지 서비스의 대시보드와 전력 설비 단선결선도 화면을 개발했습니다. JointJS를 비교·선정하고, 제공받은 설비 기호와 연결 데이터를 그리는 화면을 혼자 구현했습니다. 개발 환경의 속도를 개선하려고 Webpack에서 Vite로 전환을 제안하고 다른 개발자와 나눠 진행했습니다.',
+        '에너지 서비스의 대시보드와 전력 설비 단선결선도를 개발했습니다. 단선결선도에 쓸 라이브러리를 비교해 JointJS를 골랐고, 전달받은 설비 기호와 연결 데이터를 화면에 그리는 일은 혼자 맡았습니다. 개발 환경 속도를 높이려고 Webpack에서 Vite로 바꾸자고 제안했습니다. 전환 작업은 동료 개발자와 나눠 맡았습니다.',
     },
   ],
 };
 
 export const workingPrinciples = [
   {
-    title: '정책을 화면의 동작으로 옮깁니다',
-    text: '배송·물류 화면에서는 같은 트래킹번호의 상품을 함께 옮기는 조건과 이동을 막을 조건을 구체화했습니다. 화면에 보이는 한 행과 실제 처리해야 할 묶음을 구분합니다.',
+    title: '배송 목록에서 한 줄을 옮길 때',
+    text: '같은 트래킹번호로 들어온 상품은 목록에서 한 줄만 골라도 함께 옮겨야 합니다. 그중 입고오류 상품이 하나라도 있으면 묶음 전체를 합배송으로 옮길 수 없게 했습니다.',
   },
   {
-    title: '문제에 맞는 기술을 선택합니다',
-    text: '구매 단계를 오가는 상태에는 Zustand를, 환율과 소수 금액 계산에는 big.js를 사용했습니다. 전력 설비의 연결 관계를 그리는 화면에서는 JointJS를 비교·선정했습니다.',
+    title: '상품 수량과 충전 금액',
+    text: '상품 상세에서 고른 옵션과 수량은 결제 화면에서도 필요해서 Zustand로 관리했습니다. 달러 충전 금액을 계산할 때는 소수점 오차를 줄이려고 big.js를 썼습니다.',
   },
   {
-    title: '실패하는 조건까지 확인합니다',
-    text: '확장 프로그램의 로그인 응답이 오지 않거나 뒤늦게 오는 조건을 테스트했습니다. 코드 수정, 테스트 통과, 배포 후 운영 확인을 구분하고 아직 확인하지 못한 조건도 남깁니다.',
+    title: '뒤늦게 도착한 로그인 응답',
+    text: '테스트에서 가상 타이머로 로그인 대기 시간인 5초를 넘겼습니다. 그 뒤에 확장 프로그램의 응답을 보내도 로그인이 다시 시작되지 않는지 확인했습니다.',
   },
 ];
 
@@ -75,11 +75,9 @@ export const projects: Project[] = [
   {
     slug: '1688-direct-purchase',
     number: '01',
-    name: '해외 상품 직접구매 플랫폼',
+    name: '해외 상품 직접구매',
     kind: 'case',
-    title: '해외 상품 옵션 선택과\n달러 충전',
-    description: '해외 상품의 옵션을 고르고 달러를 충전해 주문하는 서비스입니다.',
-    lead: '선택한 옵션과 수량은 Zustand로 다음 화면까지 이어가고, 위안화 가격을 달러 충전액으로 바꾸는 계산에는 big.js를 썼습니다.',
+    description: '상품 링크를 붙여 넣고 옵션을 골라 주문하는 서비스입니다. 구매 화면을 기획하고 프런트엔드를 개발했습니다.',
     role: '상세 기획 · FE 설계와 구현 · 출시 후 운영',
     milestone: '2025년 2월 서비스 공개',
     flow: purchaseFlow,
@@ -111,7 +109,7 @@ export const projects: Project[] = [
     name: '배송·물류 신청 서비스',
     kind: 'case',
     title: '같은 트래킹번호의 상품을\n함께 옮기기',
-    description: '배송상품을 등록하고 신청 유형을 분류해 출고를 요청하는 서비스입니다.',
+    description: '상품을 등록한 뒤 신청 유형별로 나누고 출고를 요청하는 화면을 만들었습니다.',
     lead: '목록에서는 여러 줄이어도 같은 트래킹번호로 들어온 상품은 한 묶음입니다. 한 줄만 골라도 묶음 전체를 옮기고, 입고오류 상품이 하나라도 있으면 합배송으로 옮기지 않도록 했습니다.',
     role: '등록·분류·출고 화면 구현 · 상품 이동 규칙 설계',
     milestone: '버튼과 드래그의 묶음 이동·차단 검증',
@@ -140,11 +138,9 @@ export const projects: Project[] = [
   {
     slug: 'frontend-reliability',
     number: '03',
-    name: 'FE 품질·관측',
+    name: '확장 프로그램 로그인 오류',
     kind: 'case',
-    title: '확장 프로그램이 응답하지 않을 때\n로그인 대기 끝내기',
-    description: '브라우저 확장 프로그램에서 웹으로 넘어올 때 발생하는 로그인 오류를 다뤘습니다.',
-    lead: '확장 프로그램이 5초 안에 응답하지 않으면 요청을 종료하고 홈으로 돌아가게 했습니다. 뒤늦은 응답은 무시하고, Sentry에는 시간 초과를 별도로 기록합니다.',
+    description: '확장 프로그램에서 응답이 안 오면 로그인 화면에서 로딩만 돌았습니다. 5초가 지나면 안내를 띄우고 홈으로 돌아가도록 고쳤습니다.',
     role: '로그인 예외 처리 · Sentry 오류 분류 · 회귀 검증',
     milestone: '응답 지연과 뒤늦은 응답에 대한 테스트 통과',
     flow: loginFlow,
@@ -173,7 +169,7 @@ export const projects: Project[] = [
     name: '의류 사입 커머스',
     kind: 'note',
     title: '의류 사입의 탐색과 주문',
-    description: '사입할 상품을 찾고 주문한 뒤 물류비와 주문내역을 확인하는 의류 커머스입니다.',
+    description: '의류 사입에 필요한 상품 검색과 주문 화면을 만들었습니다. 주문 내역과 물류비는 마이페이지에서 확인할 수 있습니다.',
     role: '상품·스토어 탐색과 주문·결제 UI 개발',
     questions: [],
     note: '2025년 초기 구축과 2026년 재구축에 참여해 상품·스토어 검색부터 주문·결제 화면까지 만들었습니다. 상품 목록으로 돌아올 때 보던 위치를 복원하고, 주문 후에는 마이페이지에서 주문내역과 물류비를 확인할 수 있게 했습니다. 2026년 3월 운영 사이트에 연결됐습니다.',

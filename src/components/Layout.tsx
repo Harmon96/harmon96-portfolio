@@ -5,6 +5,7 @@ import { hrefFor } from '../lib/routes';
 import { useActiveSection } from '../hooks/useActiveSection';
 import { PageEffects } from './PageEffects';
 import { WaterIntro } from './WaterIntro';
+import { ThemeDice } from './ThemeDice';
 
 const homeSections = ['projects', 'about'];
 
@@ -26,28 +27,31 @@ export function Layout({ children, base, home = false }: { children: ReactNode; 
       </a>
       <header className={`site-header wrap ${home ? 'workspace-header' : ''}`}>
         <a className="wordmark" href={base} aria-label="임재혁 포트폴리오 홈">
-          <span>{profile.name}<span className="wordmark-role">Portfolio</span></span>
+          <span>{profile.name}{!home && <span className="wordmark-role">Portfolio</span>}</span>
         </a>
-        <nav aria-label="주요 메뉴">
-          <a
-            aria-current={active === 'projects' ? 'location' : undefined}
-            href={hrefFor('/#projects', base)}
-          >
-            작업
-          </a>
-          <a
-            aria-current={active === 'experiments' ? 'location' : undefined}
-            href={hrefFor('/#experiments', base)}
-          >
-            실험
-          </a>
-          <a
-            aria-current={active === 'about' ? 'location' : undefined}
-            href={hrefFor('/#about', base)}
-          >
-            소개
-          </a>
-        </nav>
+        <div className="header-actions">
+          <nav aria-label="주요 메뉴">
+            <a
+              aria-current={active === 'projects' ? 'location' : undefined}
+              href={hrefFor('/#projects', base)}
+            >
+              작업
+            </a>
+            <a
+              aria-current={active === 'experiments' ? 'location' : undefined}
+              href={hrefFor('/#experiments', base)}
+            >
+              실험
+            </a>
+            <a
+              aria-current={active === 'about' ? 'location' : undefined}
+              href={hrefFor('/#about', base)}
+            >
+              소개
+            </a>
+          </nav>
+          <ThemeDice />
+        </div>
       </header>
       <main id="main" tabIndex={-1} className={home ? 'workspace-main' : undefined}>
         {children}

@@ -6,6 +6,7 @@ import type { CaseScene } from '../scene/case-scene';
 export function CaseSculpture({ slug }: { slug: string }) {
   const work = spatialWorks.find((item) => item.slug === slug);
   const canvas = useRef<HTMLCanvasElement>(null);
+  const guide = useRef<HTMLElement>(null);
   const scene = useRef<CaseScene | null>(null);
   const reduced = useReducedMotion();
   const motion = useRef(reduced);
@@ -17,8 +18,9 @@ export function CaseSculpture({ slug }: { slug: string }) {
   }, [reduced]);
 
   useEffect(() => {
-    if (!work || !canvas.current) return;
+    if (!work || !canvas.current || !guide.current) return;
     const element = canvas.current;
+    const ring = guide.current;
     let cancelled = false;
     setStatus('loading');
 
@@ -27,6 +29,7 @@ export function CaseSculpture({ slug }: { slug: string }) {
         if (cancelled) return;
         scene.current = createCaseScene({
           canvas: element,
+          guide: ring,
           kind: work.kind,
           rotation: work.rotation,
           reducedMotion: motion.current,
@@ -69,6 +72,7 @@ export function CaseSculpture({ slug }: { slug: string }) {
           aria-describedby={`case-sculpture-${slug}-caption`}
           aria-hidden={status !== 'ready'}
         />
+        <i ref={guide} className="sculpture-drag-guide" data-exhibit={slug} aria-hidden="true" hidden />
         <figcaption id={`case-sculpture-${slug}-caption`} className="case-sculpture-caption">
           <span><i aria-hidden="true" />{work.shortName}</span>
           <span>{status === 'ready' ? '드래그해서 돌려보세요' : '프로젝트 조형물'}</span>

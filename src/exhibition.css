@@ -25,7 +25,6 @@
 .about-heading .about-links { margin-top: 32px; }
 .about-story { max-width: 680px; min-width: 0; }
 .about-story > p { font-size: 15px; color: var(--muted); line-height: 1.95; }
-.about-story > .about-lead { font-size: 22px; color: var(--ink); line-height: 1.7; letter-spacing: -.04em; margin-bottom: 24px; }
 .about-story .about-more { margin-top: 28px; }
 .about-story .about-more summary { min-height: 52px; font-size: 14px; }
 .about-principle h3 { font-size: 14px; font-weight: 550; margin-block: 9px 5px; }
@@ -71,7 +70,6 @@
   .exhibition-about { grid-template-columns: 1fr; gap: 36px; padding-block: 56px; }
   .about-heading h2 { font-size: 34px; }
   .about-heading .about-links { margin-top: 16px; }
-  .about-story > .about-lead { font-size: 19px; }
   .about-story > p { font-size: 14px; }
   .exhibition-careers article { grid-template-columns: 1fr; gap: 4px; }
   .site-footer { align-items: flex-start; }
