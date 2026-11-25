@@ -1,6 +1,6 @@
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { App, pageMetadata } from './App';
-import { localPath } from './lib/routes';
+import { hrefFor, localPath, playgroundPath } from './lib/routes';
 import './styles.css';
 import 'lenis/dist/lenis.css';
 import './exhibition.css';
@@ -12,9 +12,13 @@ import './editions.css';
 import './theme-picker.css';
 import './typography.css';
 import './rotation.css';
+import './portfolio-home.css';
 
 const base = import.meta.env.BASE_URL;
 const path = localPath(window.location.pathname, base);
+if (path === '/' && window.location.hash === '#experiments') {
+  window.location.replace(hrefFor(playgroundPath, base) + window.location.search + '#experiments');
+}
 const metadata = pageMetadata(path);
 document.title = metadata.title;
 document.querySelector('meta[name="description"]')?.setAttribute('content', metadata.description);

@@ -102,3 +102,5 @@ html[data-theme='organic'] :is(.wordmark, .workspace-word, .case-title-line) { f
 html[data-theme='minimal'] .case-article section > p { font-weight: 420; line-height: 1.95; }
 html[data-theme='cinema'] .case-title-line { letter-spacing: -.035em; }
 html[data-theme='retro'] :is(.case-title-line, .wordmark, .workspace-detail h2) { letter-spacing: -.025em; }
+
+html:not([data-theme]) { --display-face: var(--sans); }

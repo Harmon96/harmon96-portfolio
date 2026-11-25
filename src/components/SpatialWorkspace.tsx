@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { projects } from '../content/portfolio';
-import { spatialWorks } from '../content/spatial';
+import { playgroundProjects, spatialWorks } from '../content/spatial';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { hrefFor, projectPath } from '../lib/routes';
 import type { WorldController, WorldMode } from '../scene/world';
@@ -27,7 +26,7 @@ export function SpatialWorkspace({ base }: { base: string }) {
   const returnFocus = useRef<HTMLElement | null>(null);
   const summary = useRef<HTMLElement>(null);
   const chooser = useRef<HTMLDivElement>(null);
-  const selectedProject = projects.find((project) => project.slug === selected);
+  const selectedProject = playgroundProjects.find((project) => project.slug === selected);
   const selectedPlay = playItems.find((item) => item.id === selected);
 
   useEffect(() => {
@@ -141,7 +140,7 @@ export function SpatialWorkspace({ base }: { base: string }) {
       <div className="workspace-bottom">
         {mode === 'work' ? (
           <nav className="workspace-direct" aria-label="프로젝트 목록">
-            {projects.map((project) => (
+            {playgroundProjects.map((project) => (
               <a key={project.slug} href={hrefFor(projectPath(project.slug), base)}
                 aria-label={`${project.name} 상세 보기`}>
                 {project.name}<span aria-hidden="true">↗</span>

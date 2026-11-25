@@ -1,0 +1,136 @@
+.portfolio-home {
+  display: grid;
+  grid-template-columns: minmax(235px, .72fr) minmax(0, 1.28fr);
+  align-items: start;
+  gap: clamp(36px, 6vw, 96px);
+  padding-block: clamp(44px, 6vw, 96px) clamp(76px, 10vw, 140px);
+  font-family: 'IBM Plex Sans KR', sans-serif;
+}
+
+.portfolio-home :is(h1, h2, h3) {
+  font-family: inherit;
+  font-weight: 600;
+}
+
+.portfolio-profile {
+  position: sticky;
+  top: 110px;
+}
+
+.portfolio-profile h1 {
+  font-size: clamp(56px, 5.8vw, 88px);
+  letter-spacing: -.08em;
+  line-height: 1.12;
+}
+
+.portfolio-role {
+  margin-top: 16px;
+  font-size: clamp(20px, 2vw, 26px);
+  letter-spacing: -.05em;
+}
+
+.portfolio-company {
+  margin-top: 6px;
+  color: var(--muted);
+}
+
+.portfolio-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin-top: 20px;
+}
+
+.portfolio-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 40px;
+  font-size: 14px;
+}
+
+.portfolio-links .arrow {
+  width: 14px;
+  height: 14px;
+}
+
+.portfolio-home a:hover,
+.portfolio-home a:focus-visible {
+  color: var(--blue-ink);
+  text-decoration: underline;
+  text-underline-offset: .23em;
+}
+
+.portfolio-record section + section {
+  margin-top: clamp(48px, 6vw, 80px);
+}
+
+.portfolio-record h2 {
+  margin-bottom: 4px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid currentColor;
+  font-size: 17px;
+  letter-spacing: -.035em;
+}
+
+.portfolio-record article {
+  padding-block: 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.portfolio-record h3 {
+  font-size: clamp(20px, 2vw, 26px);
+  line-height: 1.4;
+  letter-spacing: -.05em;
+}
+
+.portfolio-project h3 a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.portfolio-project .arrow {
+  color: var(--blue-ink);
+}
+
+.portfolio-project ul {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0 0;
+  padding-inline-start: 1.15em;
+}
+
+.portfolio-record :is(li, article > p) {
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.portfolio-project li::marker {
+  font-size: .7em;
+}
+
+.portfolio-employer .portfolio-tenure {
+  margin: 2px 0 10px;
+  font-size: 14px;
+}
+
+@media (max-width: 800px) {
+  .portfolio-home {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 38px;
+  }
+
+  .portfolio-profile {
+    position: static;
+  }
+
+  .portfolio-profile h1 {
+    font-size: clamp(52px, 10vw, 68px);
+  }
+
+  .portfolio-links {
+    margin-top: 12px;
+  }
+}

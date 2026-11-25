@@ -2,6 +2,9 @@ import { expect, test } from '@playwright/test';
 
 test('첫 방문에 세 번 물방울을 떨어뜨리면 전시장이 열리고 재방문은 바로 진입한다', async ({ page, isMobile }) => {
   await page.goto('./');
+  await expect(page.locator('#projects')).toBeVisible();
+  await expect(page.locator('.water-intro, canvas')).toHaveCount(0);
+  await page.getByRole('link', { name: /Playground/i }).click();
   const dialog = page.getByRole('dialog', { name: '물방울을 세 번 떨어뜨려 주세요' });
   const water = dialog.getByRole('button', { name: '물방울 떨어뜨리기' });
   await expect(dialog).toBeVisible();
@@ -47,7 +50,7 @@ test('첫 방문에 세 번 물방울을 떨어뜨리면 전시장이 열리고 
 
 test('모션 감소 설정에서 키보드로 입장하고 Escape로 다시 보기를 닫는다', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('./');
+  await page.goto('./playground/');
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByRole('button', { name: '물방울 떨어뜨리기' })).toBeFocused();
   await page.mouse.move(200, 200, { steps: 10 });
@@ -64,9 +67,10 @@ test('모션 감소 설정에서 키보드로 입장하고 Escape로 다시 보�
   await expect(dialog).toHaveCount(0);
 });
 
-test('홈의 섹션을 직접 열면 인트로를 거치지 않는다', async ({ page }) => {
-  await page.goto('./#about');
+test('기존 실험 북마크에서 Playground 실험을 직접 연다', async ({ page }) => {
+  await page.goto('./#experiments');
+  await expect(page).toHaveURL(/\/playground\/#experiments$/);
   await expect(page.getByRole('button', { name: '인트로 다시 보기' })).toBeAttached();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.locator('#about')).toBeInViewport();
+  await expect(page.locator('.workspace')).toHaveAttribute('data-mode', 'play');
 });

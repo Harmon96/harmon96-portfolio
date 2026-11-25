@@ -35,11 +35,24 @@ async function expectThemeToast(page: Page, theme: ThemeId) {
   await expect(toast).toHaveAttribute('data-theme', theme);
   await expect(toast).toContainText(toastNames[theme]);
   await expect(toast).toHaveAttribute('aria-hidden', 'true');
+  const placement = await toast.evaluate(element => {
+    const rect = element.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    return {
+      offCenter: Math.abs(innerWidth / 2 - x),
+      withinTopThird: rect.top >= 0 && y < innerHeight / 3,
+      blocksPointer: element.contains(document.elementFromPoint(x, y)),
+    };
+  });
+  expect(placement.offCenter).toBeLessThanOrEqual(3);
+  expect(placement.withinTopThird).toBe(true);
+  expect(placement.blocksPointer).toBe(false);
 }
 
 test('첫 방문에서 키보드로 열 가지 테마를 한 바퀴 돌고, 다음 전환에도 직전 테마를 반복하지 않는다', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('./#projects');
+  await page.goto('./playground/#projects');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'spatial');
   await expect(themeButton(page)).toBeVisible();
   await expect(page.locator('[data-theme-toast]')).toBeHidden();
@@ -56,7 +69,7 @@ test('첫 방문에서 키보드로 열 가지 테마를 한 바퀴 돌고, 다�
 
 test('정상 모션에서 빠르게 연타하면 한 번만 테마를 바꾸고 전환이 끝난 뒤 다시 입력을 받는다', async ({ page, isMobile }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.goto('./#projects');
+  await page.goto('./playground/#projects');
   await expect(themeButton(page)).toBeEnabled();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'spatial');
   const observed = await page.evaluateHandle(() => {
@@ -89,7 +102,7 @@ test('정상 모션에서 빠르게 연타하면 한 번만 테마를 바꾸고 
 });
 
 test('테마를 바꿔도 미리보기, 띠 변형과 실험 선택이 유지된다', async ({ page }) => {
-  await page.goto('./#projects');
+  await page.goto('./playground/#projects');
   const canvas = page.locator('.spatial-stage');
   await expect(canvas).toHaveAttribute('data-ready', 'true');
   await page.getByRole('button', { name: '직접구매 미리보기', exact: true }).click();
@@ -111,72 +124,22 @@ test('테마를 바꿔도 미리보기, 띠 변형과 실험 선택이 유지된
   await expect(canvas).toHaveAttribute('data-twist', '100');
 });
 
-test('상세·새로고침·뒤로가기에서 테마가 이어지고, 테마 전환 후에도 읽던 도식이 유지된다', async ({ page, isMobile }) => {
-  await page.goto('./#projects');
+test('선택한 테마는 Playground에서만 적용되고 다시 방문해도 유지된다', async ({ page }) => {
+  await page.goto('./playground/#projects');
   const chosen = await changeTheme(page);
   await page.getByRole('link', { name: '해외 상품 직접구매 상세 보기' }).click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', chosen);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('해외 상품 직접구매');
+  await expect(page.locator('html[data-theme]')).toHaveCount(0);
+  await expect(themeButton(page)).toHaveCount(0);
   await page.reload();
+  await expect(page.locator('html[data-theme]')).toHaveCount(0);
+  await page.getByRole('link', { name: '프로젝트 목록', exact: true }).click();
+  await expect(page.locator('#projects')).toBeVisible();
+  await expect(page.locator('html[data-theme]')).toHaveCount(0);
+  await page.getByRole('navigation', { name: '주요 메뉴' }).getByRole('link', { name: /Playground/i }).click();
+  await page.getByRole('button', { name: '건너뛰기' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', chosen);
   await expect(themeButton(page)).toBeVisible();
-  await expect(page.locator('[data-theme-toast]')).toBeHidden();
-  const diagram = page.locator('#implementation .flow-diagram');
-  const step = diagram.getByRole('button', { name: /환율 적용/ });
-  await step.click();
-  await expect(step).toHaveAttribute('aria-pressed', 'true');
-  await step.evaluate(element => element.scrollIntoView({ block: 'center', behavior: 'instant' }));
-  await expect(step).toBeInViewport({ ratio: 1 });
-  // The sticky button is already visible. Locator.click() may scroll the document
-  // to its normal-flow position before dispatching input, moving the reading anchor.
-  const dice = await themeButton(page).evaluate(button => {
-    const { left, top, width, height } = button.getBoundingClientRect();
-    const x = left + width / 2;
-    const y = top + height / 2;
-    return { x, y, hit: button.contains(document.elementFromPoint(x, y)) };
-  });
-  expect(dice.hit).toBe(true);
-  const before = await step.evaluate(element => {
-    const rect = element.getBoundingClientRect();
-    return {
-      top: rect.top,
-      bottom: rect.bottom,
-      headerBottom: document.querySelector('header')!.getBoundingClientRect().bottom,
-      viewportHeight: innerHeight,
-      scroll: scrollY,
-    };
-  });
-  expect(before.scroll).toBeGreaterThan(0);
-  expect(before.top).toBeGreaterThan(before.headerBottom + 16);
-  expect(before.bottom).toBeLessThan(before.viewportHeight - 16);
-  if (isMobile) await page.touchscreen.tap(dice.x, dice.y);
-  else await page.mouse.click(dice.x, dice.y);
-  await expect(page.locator('html')).not.toHaveAttribute('data-theme', chosen);
-  await waitForThemeTransition(page);
-  const changedOnDetail = await page.locator('html').getAttribute('data-theme');
-  expect(themes).toContain(changedOnDetail);
-  await expectThemeToast(page, changedOnDetail as ThemeId);
-  const placement = await page.locator('[data-theme-toast]').evaluate(element => {
-    const rect = element.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    return {
-      offCenter: Math.abs(innerWidth / 2 - centerX),
-      withinTopThird: rect.top >= 0 && centerY < innerHeight / 3,
-      blocksPointer: element.contains(document.elementFromPoint(centerX, centerY)),
-    };
-  });
-  expect(placement.offCenter).toBeLessThanOrEqual(3);
-  expect(placement.withinTopThird).toBe(true);
-  expect(placement.blocksPointer).toBe(false);
-  await expect(step).toHaveAttribute('aria-pressed', 'true');
-  await expect(diagram.locator('.flow-detail')).toContainText('big.js');
-  await expect(step).toBeInViewport({ ratio: 1 });
-  const afterTop = await step.evaluate(element => element.getBoundingClientRect().top);
-  expect(Math.abs(afterTop - before.top)).toBeLessThanOrEqual(3);
-  await page.goBack();
-  await expect(page).toHaveURL(/\/#projects$/);
-  await expect(page.locator('html')).toHaveAttribute('data-theme', changedOnDetail!);
-  await expect(page.getByRole('navigation', { name: '프로젝트 목록', exact: true })).toBeVisible();
 });
 
 test('320px에서 WebGL을 쓸 수 없어도 모든 테마의 프로젝트 목록과 상세 본문을 읽을 수 있다', async ({ page }) => {
@@ -189,37 +152,30 @@ test('320px에서 WebGL을 쓸 수 없어도 모든 테마의 프로젝트 목�
       return Reflect.apply(original, this, [contextId, ...args]);
     } as typeof HTMLCanvasElement.prototype.getContext;
   });
-  await page.goto('./#projects');
+  await page.goto('./playground/#projects');
   await expect(page.locator('.workspace')).toHaveClass(/is-fallback/);
   const list = page.getByRole('navigation', { name: '프로젝트 목록', exact: true });
   const link = list.getByRole('link', { name: '해외 상품 직접구매 상세 보기' });
-  const homeThemes: string[] = [];
+  const playgroundThemes: string[] = [];
   for (let index = 0; index < themes.length; index++) {
     const theme = index === 0 ? await page.locator('html').getAttribute('data-theme') : await changeTheme(page, 'Enter');
-    homeThemes.push(theme!);
+    playgroundThemes.push(theme!);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
     await expect(list.getByRole('link')).toHaveCount(4);
     await expect(link).toBeVisible();
     await expect(themeButton(page)).toBeInViewport();
   }
-  expect(homeThemes.sort()).toEqual([...themes].sort());
+  expect(playgroundThemes.sort()).toEqual([...themes].sort());
   await link.click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('해외 상품 직접구매');
-  // The first deck was exhausted on the home page. Draw a full new deck on the detail page.
-  const detailThemes: string[] = [];
-  for (let index = 0; index < themes.length; index++) {
-    const theme = await changeTheme(page, 'Enter');
-    detailThemes.push(theme);
-    await expectThemeToast(page, theme);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
-    await expect(page.locator('#result p').last()).toBeVisible();
-  }
-  expect(detailThemes.sort()).toEqual([...themes].sort());
+  await expect(page.locator('html[data-theme]')).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+  await expect(page.locator('#result p').last()).toBeVisible();
 });
 
 test('연속 전환 시 마지막 테마의 알림만 남았다가 자동으로 닫힌다', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('./404.html');
+  await page.goto('./playground/#projects');
   const dice = themeButton(page);
   await expect(dice).toBeVisible();
 
@@ -240,24 +196,25 @@ test('연속 전환 시 마지막 테마의 알림만 남았다가 자동으로 
 
 test.describe('JavaScript 비활성화', () => {
   test.use({ javaScriptEnabled: false });
-  test('기본 테마에서 프로젝트 목록과 직접구매 본문을 읽을 수 있다', async ({ page }) => {
+  test('포트폴리오에서 프로젝트 목록과 직접구매 본문을 읽을 수 있다', async ({ page }) => {
     await page.goto('./#projects');
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'spatial');
+    await expect(page.locator('html[data-theme]')).toHaveCount(0);
     await expect(themeButton(page)).toBeHidden();
-    await page.getByRole('link', { name: '해외 상품 직접구매 상세 보기' }).click();
+    await page.locator('#projects').getByRole('link', { name: /해외 상품 직접구매/ }).click();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('해외 상품 직접구매');
     await expect(page.locator('#result p').last()).toBeVisible();
   });
 });
 
-test('열 가지 테마의 한글 사례 제목과 본문, 선택 목록에 지정한 웹폰트가 렌더링된다', async ({ page }) => {
+test('열 가지 테마의 한글 미리보기 제목과 본문, 선택 목록에 지정한 웹폰트가 렌더링된다', async ({ page }) => {
   const display: Record<ThemeId, string> = {
     spatial: 'Gugi', glass: 'Orbit', clay: 'Jua', minimal: 'Hahmlet',
     type: 'BlackHanSans', blueprint: 'NanumGothicCoding', retro: 'Galmuri11',
     collage: 'Gaegu', cinema: 'SongMyung', organic: 'GowunBatang',
   };
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('./projects/1688-direct-purchase/');
+  await page.goto('./playground/#projects');
+  await page.getByRole('button', { name: '직접구매 미리보기', exact: true }).click();
   const client = await page.context().newCDPSession(page);
   await client.send('DOM.enable');
   await client.send('CSS.enable');
@@ -273,18 +230,18 @@ test('열 가지 테마의 한글 사례 제목과 본문, 선택 목록에 지�
     }
   }
   for (const theme of themes) {
-    await themeButton(page).press('ArrowDown');
+    await page.getByRole('button', { name: '테마 선택', exact: true }).click();
     await page.getByRole('menuitemradio', { name: toastNames[theme], exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
     await waitForThemeTransition(page);
-    await themeButton(page).press('ArrowDown');
+    await page.getByRole('button', { name: '테마 선택', exact: true }).click();
     await expect(page.getByRole('menu')).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     const bodyFamily = ['collage', 'organic'].includes(theme) ? 'GowunDodum' : 'IBMPlexSansKR';
     const readingFamily = theme === 'minimal' ? 'Hahmlet' : bodyFamily;
     const menuFamily = theme === 'retro' ? 'Galmuri11' : bodyFamily;
-    await expectRenderedFamily('.case-title-line', display[theme]);
-    await expectRenderedFamily('.case-article section p', readingFamily);
+    await expectRenderedFamily('.workspace-detail h2', display[theme]);
+    await expectRenderedFamily('.workspace-description', readingFamily);
     await expectRenderedFamily('.theme-picker-menu button:nth-child(2) > span:nth-child(2)', menuFamily);
     await page.keyboard.press('Escape');
   }

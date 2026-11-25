@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
+import { playgroundProjects } from '../content/spatial';
 import { projects, type CaseStudy, type Project } from '../content/portfolio';
 import { useActiveSection } from '../hooks/useActiveSection';
 import { Arrow } from '../components/Arrow';
 import { FlowDiagram } from '../components/FlowDiagram';
-import { CaseSculpture } from '../components/CaseSculpture';
-import { hrefFor, projectPath } from '../lib/routes';
+import { hrefFor, playgroundPath, projectPath } from '../lib/routes';
 
 function CaseBody({ project }: { project: CaseStudy }) {
   const sectionIds = useMemo(() => project.sections.map((section) => section.id), [project]);
@@ -43,12 +43,15 @@ function CaseBody({ project }: { project: CaseStudy }) {
 }
 
 export function ProjectPage({ project, base }: { project: Project; base: string }) {
-  const next = projects[(projects.indexOf(project) + 1) % projects.length]!;
+  const onHome = projects.includes(project);
+  const collection = onHome ? projects : playgroundProjects;
+  const listHref = hrefFor((onHome ? '/' : playgroundPath) + '#projects', base);
+  const next = collection[(collection.indexOf(project) + 1) % collection.length]!;
 
   return (
     <>
       <div className="case-header wrap" id="scope">
-        <a className="back-link" href={hrefFor('/#projects', base)}>
+        <a className="back-link" href={listHref}>
           <Arrow direction="left" />
           프로젝트 목록
         </a>
@@ -75,7 +78,6 @@ export function ProjectPage({ project, base }: { project: Project; base: string 
           <p>{project.note}</p>
         </article>
       )}
-      <CaseSculpture slug={project.slug} />
       <div className="next-case wrap">
         <a href={hrefFor(projectPath(next.slug), base)}>
           <span>
@@ -84,7 +86,7 @@ export function ProjectPage({ project, base }: { project: Project; base: string 
           </span>
           <Arrow direction="right" />
         </a>
-        <a className="text-link" href={hrefFor('/#projects', base)}>
+        <a className="text-link" href={listHref}>
           전체 프로젝트 보기
           <Arrow />
         </a>

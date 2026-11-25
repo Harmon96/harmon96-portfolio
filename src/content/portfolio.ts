@@ -14,6 +14,7 @@ type ProjectInfo = {
   title?: string;
   description: string;
   role: string;
+  contributions: string[];
   questions: string[];
 };
 
@@ -81,6 +82,10 @@ export const projects: Project[] = [
     role: '상세 기획 · FE 설계와 구현 · 출시 후 운영',
     milestone: '2025년 2월 서비스 공개',
     flow: purchaseFlow,
+    contributions: [
+      '직접구매 서비스의 상세 기획을 맡고 프론트엔드 전체를 혼자 구현했습니다.',
+      '위안화 상품 가격을 달러로 환산하는 충전 계산기를 만들었습니다.',
+    ],
     questions: ['다음 화면에 어떤 값을 넘겨야 할까?', '달러로 얼마를 충전해야 할까?'],
     sections: [
       {
@@ -114,6 +119,10 @@ export const projects: Project[] = [
     role: '등록·분류·출고 화면 구현 · 상품 이동 규칙 설계',
     milestone: '버튼과 드래그의 묶음 이동·차단 검증',
     flow: deliveryFlow,
+    contributions: [
+      '상품 등록, 배송 유형 분류, 출고 신청 화면을 만들었습니다.',
+      '목록에서 한 줄만 끌어도 같은 트래킹번호의 상품이 함께 움직이도록 했습니다.',
+    ],
     questions: ['상품 하나를 끌었을 때 무엇을 함께 옮길까?', '묶음 안에 이동할 수 없는 상품이 있으면 어떻게 할까?'],
     sections: [
       {
@@ -144,6 +153,10 @@ export const projects: Project[] = [
     role: '로그인 예외 처리 · Sentry 오류 분류 · 회귀 검증',
     milestone: '응답 지연과 뒤늦은 응답에 대한 테스트 통과',
     flow: loginFlow,
+    contributions: [
+      '확장 프로그램이 응답하지 않으면 로그인 화면에서 로딩만 돌던 문제를 고쳤습니다.',
+      '5초가 지나면 홈으로 돌아가고, 뒤늦게 온 응답은 무시하도록 했습니다.',
+    ],
     questions: ['웹에서 확장 프로그램을 얼마나 기다릴까?', '대기가 끝난 뒤 도착한 응답은 어떻게 다룰까?'],
     sections: [
       {
@@ -171,7 +184,25 @@ export const projects: Project[] = [
     title: '의류 사입의 탐색과 주문',
     description: '의류 사입에 필요한 상품 검색과 주문 화면을 만들었습니다. 주문 내역과 물류비는 마이페이지에서 확인할 수 있습니다.',
     role: '상품·스토어 탐색과 주문·결제 UI 개발',
+    contributions: [
+      '상품·스토어 검색과 주문·결제 화면을 개발했습니다.',
+      '상품 상세에서 목록으로 돌아오면 보던 위치를 복원하도록 했습니다.',
+    ],
     questions: [],
     note: '2025년 초기 구축과 2026년 재구축에 참여해 상품·스토어 검색부터 주문·결제 화면까지 만들었습니다. 상품 목록으로 돌아올 때 보던 위치를 복원하고, 주문 후에는 마이페이지에서 주문내역과 물류비를 확인할 수 있게 했습니다. 2026년 3월 운영 사이트에 연결됐습니다.',
   },
 ];
+
+export const smartGrid: Project = {
+  kind: 'note',
+  slug: 'smart-grid',
+  number: '05',
+  name: '스마트 그리드',
+  description: 'EIPGRID에서 도시형 스마트 그리드 홈페이지의 전체 페이지와 차트를 개발했습니다.',
+  role: '페이지 구현 · 차트 개발',
+  contributions: [],
+  questions: [],
+  note: 'EIPGRID에서 도시형 스마트 그리드 홈페이지를 개발했습니다. 디자인 시안을 바탕으로 전체 페이지를 구현하고 화면에 들어가는 차트를 만들었습니다. Vue 3와 Pinia, Vite를 사용했습니다.',
+};
+
+export const allProjects = [...projects, smartGrid];

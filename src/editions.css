@@ -151,7 +151,7 @@ html[data-theme='blueprint'] {
 /* A graphite desktop, a window title bar and working project folders. */
 html[data-theme='retro'] {
   --desktop: #207671;
-  .site-header.wrap { width: 100%; padding-inline: var(--gutter); min-height: 70px; border-bottom: 2px solid #283a34; box-shadow: inset 0 -2px #fafbef; }
+  .site-header.wrap { --header-gutter: var(--gutter); min-height: 70px; border-bottom: 2px solid #283a34; box-shadow: inset 0 -2px #fafbef; }
   .theme-dice, .theme-toast, .workspace-detail, .workspace-play-controls button,
   .letter-controls select, .flow-steps button { border-radius: 0; box-shadow: var(--bevel); }
   .workspace {
