@@ -1,47 +1,51 @@
-import { profile, workingPrinciples } from '../content/portfolio';
 import { Arrow } from '../components/Arrow';
-import { SpatialWorkspace } from '../components/SpatialWorkspace';
+import { profile, projects } from '../content/portfolio';
+import { hrefFor, projectPath } from '../lib/routes';
 
 export function Home({ base }: { base: string }) {
   return (
-    <>
-      <SpatialWorkspace base={base} />
-      <section className="exhibition-about wrap" id="about" aria-labelledby="about-title">
-        <div className="about-heading">
-          <p className="section-kicker">ABOUT</p>
-          <h2 id="about-title" data-reveal>안녕하세요.<br />임재혁입니다.</h2>
-          <div className="about-links">
-            {profile.links.filter((link) => link.href.trim()).map((link) => (
-              <a className="text-link" href={link.href} key={link.label} target={link.href.startsWith('mailto:') ? undefined : '_blank'} rel="noreferrer">
-                {link.label}<span className="sr-only">{link.href.startsWith('mailto:') ? ' (메일 작성)' : ' (새 탭)'}</span><Arrow direction="up-right" />
-              </a>
-            ))}
-          </div>
-        </div>
-        <div className="about-story">
-          <p className="about-lead" data-reveal>상품을 고르는 화면부터 결제하고 배송을 신청하는 화면까지 만들었습니다.</p>
-          <p data-reveal>{profile.introduction}</p>
-          <details className="about-more">
-            <summary>일하는 방식<span aria-hidden="true">+</span></summary>
-            {workingPrinciples.map((principle) => (
-              <div className="about-principle" key={principle.title}>
-                <h3>{principle.title}</h3><p>{principle.text}</p>
-              </div>
-            ))}
-            <p>코드를 찾거나 수정안을 검토할 때는 AI를 씁니다. 수정 범위는 제가 정합니다.</p>
-          </details>
-          <div className="exhibition-careers">
-            <h3 className="section-kicker">경력</h3>
-            {profile.careers.map((career) => (
-              <article key={career.company} data-reveal>
-                <div><h4>{career.company}</h4><p>{career.role}</p></div>
-                <span>{career.period}</span>
-                {career.description && <p className="career-description">{career.description}</p>}
-              </article>
-            ))}
-          </div>
+    <div className="portfolio-home wrap">
+      <section className="portfolio-profile" id="about" aria-labelledby="profile-name">
+        <h1 id="profile-name">{profile.name}</h1>
+        <p className="portfolio-role">프론트엔드 개발자</p>
+        <p className="portfolio-company">슈퍼레이블에서 일하고 있습니다.</p>
+        <div className="portfolio-links">
+          {profile.links.filter(({ href }) => href.trim()).map(({ label, href }) => (
+            <a key={href} href={href} target={href.startsWith('mailto:') ? undefined : '_blank'} rel="noreferrer">
+              {label}<span className="sr-only">{href.startsWith('mailto:') ? ' (메일 작성)' : ' (새 탭)'}</span><Arrow direction="up-right" />
+            </a>
+          ))}
         </div>
       </section>
-    </>
+
+      <div className="portfolio-record">
+        <section id="projects" aria-labelledby="projects-title">
+          <h2 id="projects-title">주요 작업</h2>
+          {projects.map((project) => (
+            <article className="portfolio-project" key={project.slug}>
+              <h3>
+                <a href={hrefFor(projectPath(project.slug), base)}>
+                  {project.name}<Arrow />
+                </a>
+              </h3>
+              <ul>
+                {project.contributions.map((line) => <li key={line}>{line}</li>)}
+              </ul>
+            </article>
+          ))}
+        </section>
+
+        <section id="experience" aria-labelledby="experience-title">
+          <h2 id="experience-title">경력</h2>
+          {profile.careers.map((career) => (
+            <article className="portfolio-employer" key={career.company}>
+              <h3>{career.company}</h3>
+              <p className="portfolio-tenure">{career.role} · {career.period}</p>
+              <p>{career.description}</p>
+            </article>
+          ))}
+        </section>
+      </div>
+    </div>
   );
 }

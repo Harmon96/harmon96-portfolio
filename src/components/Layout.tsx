@@ -1,14 +1,15 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { profile } from '../content/portfolio';
 import { Arrow } from './Arrow';
-import { hrefFor } from '../lib/routes';
+import { hrefFor, playgroundPath } from '../lib/routes';
 import { useActiveSection } from '../hooks/useActiveSection';
 import { PageEffects } from './PageEffects';
 import { WaterIntro } from './WaterIntro';
+import { ThemeDice } from './ThemeDice';
 
-const homeSections = ['projects', 'about'];
+const homeSections = ['projects', 'experience'];
 
-export function Layout({ children, base, home = false }: { children: ReactNode; base: string; home?: boolean }) {
+export function Layout({ children, base, playground }: { children: ReactNode; base: string; playground: boolean }) {
   const current = useActiveSection(homeSections);
   const [hash, setHash] = useState('');
   useEffect(() => {
@@ -17,39 +18,35 @@ export function Layout({ children, base, home = false }: { children: ReactNode; 
     window.addEventListener('hashchange', update);
     return () => window.removeEventListener('hashchange', update);
   }, []);
-  const active = current === 'projects' && hash === '#experiments' ? 'experiments' : current;
+  const active = playground ? (hash === '#experiments' ? 'experiments' : 'projects') : current;
   return (
     <>
       <PageEffects />
       <a className="skip-link" href="#main">
         본문으로 건너뛰기
       </a>
-      <header className={`site-header wrap ${home ? 'workspace-header' : ''}`}>
+      <header className={`site-header wrap ${playground ? 'workspace-header' : ''}`}>
         <a className="wordmark" href={base} aria-label="임재혁 포트폴리오 홈">
-          <span>{profile.name}<span className="wordmark-role">Portfolio</span></span>
+          <span>{profile.name}{!playground && <span className="wordmark-role">Portfolio</span>}</span>
         </a>
-        <nav aria-label="주요 메뉴">
-          <a
-            aria-current={active === 'projects' ? 'location' : undefined}
-            href={hrefFor('/#projects', base)}
-          >
-            작업
-          </a>
-          <a
-            aria-current={active === 'experiments' ? 'location' : undefined}
-            href={hrefFor('/#experiments', base)}
-          >
-            실험
-          </a>
-          <a
-            aria-current={active === 'about' ? 'location' : undefined}
-            href={hrefFor('/#about', base)}
-          >
-            소개
-          </a>
-        </nav>
+        <div className="header-actions">
+          <nav aria-label="주요 메뉴">
+            <a aria-current={active === 'projects' ? 'location' : undefined}
+              href={playground ? '#projects' : hrefFor('/#projects', base)}>작업</a>
+            {playground ? (
+              <a aria-current={active === 'experiments' ? 'location' : undefined} href="#experiments">실험</a>
+            ) : (
+              <>
+                <a aria-current={active === 'experience' ? 'location' : undefined}
+                  href={hrefFor('/#experience', base)}>경력</a>
+                <a href={hrefFor(playgroundPath, base)} lang="en">Playground</a>
+              </>
+            )}
+          </nav>
+          {playground && <ThemeDice />}
+        </div>
       </header>
-      <main id="main" tabIndex={-1} className={home ? 'workspace-main' : undefined}>
+      <main id="main" tabIndex={-1} className={playground ? 'workspace-main' : undefined}>
         {children}
       </main>
       <footer className="site-footer wrap">
@@ -69,7 +66,7 @@ export function Layout({ children, base, home = false }: { children: ReactNode; 
                 <Arrow direction="up-right" />
               </a>
             ))}
-          {home && <WaterIntro />}
+          {playground && <WaterIntro />}
           <a href="#main">
             맨 위로
             <Arrow direction="up-right" />

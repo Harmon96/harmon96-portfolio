@@ -1,0 +1,106 @@
+@font-face {
+  font-family: 'IBM Plex Sans KR'; src: url('./assets/fonts/ibm-plex-sans-kr-400.woff2') format('woff2');
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Sans KR'; src: url('./assets/fonts/ibm-plex-sans-kr-600.woff2') format('woff2');
+  font-weight: 600; font-display: swap;
+}
+@font-face {
+  font-family: 'Gugi'; src: url('./assets/fonts/gugi.woff2') format('woff2');
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: 'Orbit'; src: url('./assets/fonts/orbit.woff2') format('woff2');
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: 'Hahmlet'; src: url('./assets/fonts/hahmlet.woff2') format('woff2');
+  font-weight: 100 900; font-display: swap;
+}
+@font-face {
+  font-family: 'Song Myung'; src: url('./assets/fonts/song-myung.woff2') format('woff2');
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: 'Gowun Batang'; src: url('./assets/fonts/gowun-batang.woff2') format('woff2');
+  font-weight: 700; font-display: swap;
+}
+@font-face {
+  font-family: 'Gowun Dodum'; src: url('./assets/fonts/gowun-dodum.woff2') format('woff2');
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: 'Nanum Gothic Coding'; src: url('./assets/fonts/nanum-gothic-coding.woff2') format('woff2');
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: 'Galmuri11'; src: url('./assets/fonts/galmuri11.woff2') format('woff2');
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: 'Jua'; src: url('./assets/fonts/jua.woff2') format('woff2');
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: 'Black Han Sans'; src: url('./assets/fonts/black-han-sans.woff2') format('woff2');
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: 'Gaegu'; src: url('./assets/fonts/gaegu.woff2') format('woff2');
+  font-weight: 700; font-display: swap;
+}
+
+/* Also used by the hidden probe while the new face loads, before measuring an edition. */
+:where(html, .theme-font-probe) {
+  --sans: 'IBM Plex Sans KR', sans-serif;
+  --humanist: 'Gowun Dodum', var(--sans);
+  --code: 'Nanum Gothic Coding', var(--sans);
+  --body-face: var(--sans);
+  --reading-face: var(--body-face);
+  --display-face: 'Gugi', var(--sans);
+  --mono: var(--code);
+}
+[data-theme='glass'] { --display-face: 'Orbit', var(--sans); }
+[data-theme='clay'] { --display-face: 'Jua', var(--sans); }
+[data-theme='minimal'] { --display-face: 'Hahmlet', var(--sans); --reading-face: var(--display-face); }
+[data-theme='type'] { --display-face: 'Black Han Sans', var(--sans); }
+[data-theme='blueprint'] { --display-face: var(--code); }
+[data-theme='retro'] {
+  --display-face: 'Galmuri11', var(--sans);
+  --body-face: var(--display-face);
+  --reading-face: var(--sans);
+  --mono: var(--display-face);
+}
+[data-theme='collage'] { --display-face: 'Gaegu', var(--sans); --body-face: var(--humanist); }
+[data-theme='cinema'] { --display-face: 'Song Myung', var(--sans); }
+[data-theme='organic'] { --display-face: 'Gowun Batang', var(--sans); --body-face: var(--humanist); }
+
+html, body { font-family: var(--body-face); }
+:where(h1, h2, h3, h4, .wordmark, .footer-name) { font-family: var(--display-face); }
+:where(button, input, select, textarea) { font-family: inherit; }
+:where(.case-description, .case-article p, .case-note p, .about-story p, .workspace-description) {
+  font-family: var(--reading-face);
+}
+.case-title-line, .workspace-detail h2, .about-heading h2, .water-prompt h2 { text-wrap: balance; }
+.case-article section > p, .case-note p, .about-story > p {
+  max-inline-size: 65ch;
+  text-wrap: pretty;
+  line-height: 1.85;
+}
+.water-prompt h2 {
+  font-family: 'Gowun Batang', var(--sans);
+  font-weight: 700;
+  letter-spacing: -.045em;
+}
+html:is([data-theme='spatial'], [data-theme='glass']) :is(.wordmark, .workspace-detail h2, .case-title-line) {
+  font-weight: 400;
+  letter-spacing: -.045em;
+}
+html[data-theme='glass'] .workspace-word { letter-spacing: -.065em; }
+html[data-theme='organic'] :is(.wordmark, .workspace-word, .case-title-line) { font-weight: 700; }
+html[data-theme='minimal'] .case-article section > p { font-weight: 420; line-height: 1.95; }
+html[data-theme='cinema'] .case-title-line { letter-spacing: -.035em; }
+html[data-theme='retro'] :is(.case-title-line, .wordmark, .workspace-detail h2) { letter-spacing: -.025em; }
+
+html:not([data-theme]) { --display-face: var(--sans); }

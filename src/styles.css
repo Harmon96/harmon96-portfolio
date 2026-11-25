@@ -48,13 +48,11 @@
     --blue-light: #edf1ff;
     --white: #fff;
     --surface: #eef0e8;
-    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
     --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
     --fast: 180ms;
     --medium: 320ms;
     color-scheme: light;
-    font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic',
-      sans-serif;
+    font-family: var(--body-face);
     color: var(--ink);
     background: var(--paper);
     font-synthesis: none;

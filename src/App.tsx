@@ -1,11 +1,15 @@
 import { Layout } from './components/Layout';
-import { projects } from './content/portfolio';
-import { projectPath } from './lib/routes';
+import { allProjects } from './content/portfolio';
+import { playgroundPath, projectPath } from './lib/routes';
+import { SpatialWorkspace } from './components/SpatialWorkspace';
 import { Home } from './pages/Home';
 import { ProjectPage } from './pages/ProjectPage';
 
 export function pageMetadata(path: string) {
-  const project = projects.find((project) => projectPath(project.slug) === path);
+  const project = allProjects.find((project) => projectPath(project.slug) === path);
+  if (path === playgroundPath) {
+    return { title: 'Playground — 임재혁', description: '3D 조형물을 돌려보고 열 가지 디자인 테마를 바꿔볼 수 있는 공간입니다.' };
+  }
   return {
     title:
       path === '/'
@@ -20,11 +24,16 @@ export function pageMetadata(path: string) {
 }
 
 export function App({ path, base }: { path: string; base: string }) {
-  const project = projects.find((project) => projectPath(project.slug) === path);
+  const project = allProjects.find((project) => projectPath(project.slug) === path);
   return (
-    <Layout base={base} home={path === '/'}>
+    <Layout base={base} playground={path === playgroundPath}>
       {path === '/' ? (
         <Home base={base} />
+      ) : path === playgroundPath ? (
+        <>
+          <h1 className="sr-only">Playground</h1>
+          <SpatialWorkspace base={base} />
+        </>
       ) : project ? (
         <ProjectPage project={project} base={base} />
       ) : (

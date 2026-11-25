@@ -1,8 +1,15 @@
 import * as THREE from 'three';
+import type { ThemeId } from '../lib/theme';
+import { applySurfaceShader } from './finishes';
 
 export type SculptureKind = 'commerce' | 'logistics' | 'style' | 'reliability' | 'ribbon' | 'type';
 export type Sculpture = {
   group: THREE.Group;
+  parts: THREE.Object3D[];
+  setTheme: (theme: ThemeId) => void;
+  assemble: (theme: ThemeId, progress: number) => void;
+  prepareExit: (camera: THREE.Camera) => void;
+  disperse: (progress: number) => void;
   update: (time: number, hover: number, twist: number) => void;
   dispose: () => void;
 };
@@ -32,16 +39,186 @@ function fit(group: THREE.Group, size = 2.8) {
   group.updateMatrixWorld(true);
 }
 
-function sculpture(group: THREE.Group, update: Sculpture['update'] = () => {}): Sculpture {
+const pigments = {
+  glass: ['#72d6e4', '#779af4', '#a1ede1', '#9182df'],
+  clay: ['#c77554', '#e9a16c', '#b794bc', '#758e78'],
+  minimal: ['#555951', '#a4a69a', '#c5c3b6', '#333935'],
+  type: ['#b62c19', '#2c2520', '#bfa275', '#2c2520'],
+  blueprint: ['#defbff', '#acdfff', '#fcba7d', '#a3f2ef'],
+  retro: ['#3953bf', '#d7613e', '#a477d8', '#28896f'],
+  collage: ['#b8484a', '#ea9a26', '#768050', '#428e98'],
+  cinema: ['#e9b780', '#cc744d', '#b69bbc', '#729aa6'],
+  organic: ['#5eaa93', '#dcaa89', '#adb96e', '#6d9bb0'],
+};
+
+function sculpture(kind: SculptureKind, group: THREE.Group, update: Sculpture['update'] = () => {}): Sculpture {
   let disposed = false;
+  const parts = [...group.children];
+  // Theme poses and motion live on the pivots. Children keep their own rotation and letter positions.
+  const pivots = parts.map((part) => {
+    const pivot = new THREE.Group();
+    pivot.add(part);
+    group.add(pivot);
+    return pivot;
+  });
+  const exitOffsets = parts.map(() => new THREE.Vector3());
+  const departurePose = pivots.map(pivot => ({
+    position: pivot.position.clone(), rotation: pivot.rotation.clone(), scale: pivot.scale.clone(),
+  }));
+  const arrival = { value: 1 };
+  const materialSlots: { mesh: THREE.Mesh; original: THREE.Material | THREE.Material[] }[] = [];
+  group.traverse((node) => {
+    if (node instanceof THREE.Mesh) materialSlots.push({ mesh: node, original: node.material });
+  });
+  const finishes = new Map<THREE.Material, THREE.MeshPhysicalMaterial>();
+  const workIndex = { commerce: 0, logistics: 1, ribbon: 1, style: 2, reliability: 3, type: 0 }[kind];
+  function finish(original: THREE.Material) {
+    let material = finishes.get(original);
+    if (!material) {
+      material = new THREE.MeshPhysicalMaterial();
+      finishes.set(original, material);
+    }
+    return material;
+  }
+  function setTheme(theme: ThemeId) {
+    if (theme === 'spatial') {
+      for (const slot of materialSlots) slot.mesh.material = slot.original;
+      return;
+    }
+    for (const slot of materialSlots) {
+      slot.mesh.material = Array.isArray(slot.original) ? slot.original.map(finish) : finish(slot.original);
+    }
+    let index = 0;
+    for (const material of finishes.values()) {
+      const pigment = kind === 'type' ? index : kind === 'reliability' && index > 0 ? 0 : workIndex;
+      material.color.set(pigments[theme][pigment]!);
+      if (kind !== 'type' && index > 0) material.color.multiplyScalar(index % 2 ? 0.69 : 1.13);
+      material.roughness = { glass: .13, clay: .95, minimal: .8, type: .8, blueprint: 1, retro: 1, collage: 1, cinema: .31, organic: .27 }[theme];
+      material.clearcoat = theme === 'glass' || theme === 'organic' ? 1 : 0;
+      material.clearcoatRoughness = 0.08;
+      material.sheen = theme === 'clay' ? 0.6 : 0;
+      material.sheenColor.copy(material.color);
+      material.sheenRoughness = 0.9;
+      material.metalness = theme === 'cinema' ? .48 : 0;
+      material.flatShading = theme === 'retro' || theme === 'collage';
+      material.toneMapped = theme !== 'blueprint' && theme !== 'retro' && theme !== 'collage';
+      material.alphaHash = theme === 'type';
+      material.transparent = theme === 'glass';
+      material.opacity = theme === 'glass' ? 0.72 : 1;
+      material.depthWrite = theme !== 'glass';
+      applySurfaceShader(material, theme, arrival);
+      material.needsUpdate = true;
+      index++;
+    }
+  }
   return {
-    group,
+    group, parts, setTheme,
+    prepareExit(camera) {
+      // Compute destinations in camera space so even a small study beside the index clears its canvas.
+      parts.forEach((part, index) => {
+        const pivot = pivots[index]!;
+        const pose = departurePose[index]!;
+        pose.position.copy(pivot.position);
+        pose.rotation.copy(pivot.rotation);
+        pose.scale.copy(pivot.scale);
+        const start = part.getWorldPosition(new THREE.Vector3()).project(camera);
+        const centerAngle = Math.hypot(start.x, start.y) > 0.08 ? Math.atan2(start.y, start.x) : workIndex * 1.68;
+        const angle = centerAngle + (index - (parts.length - 1) / 2) * 0.64;
+        const end = start.clone();
+        end.x += Math.cos(angle) * 3.2;
+        end.y += Math.sin(angle) * 3.2;
+        exitOffsets[index]!.copy(group.worldToLocal(end.unproject(camera))).sub(group.worldToLocal(start.unproject(camera)));
+      });
+    },
+    disperse(progress) {
+      pivots.forEach((pivot, index) => {
+        const t = THREE.MathUtils.clamp(progress * 1.18 - index * 0.06, 0, 1) ** 1.6;
+        const pose = departurePose[index]!;
+        pivot.position.copy(pose.position).addScaledVector(exitOffsets[index]!, t);
+        pivot.rotation.copy(pose.rotation);
+        pivot.rotation.z += (index % 2 ? -0.52 : 0.46) * t;
+        pivot.scale.copy(pose.scale).multiplyScalar(1 - 0.23 * t);
+      });
+    },
+    assemble(theme, progress) {
+      arrival.value = progress;
+      if (theme === 'type') {
+        // Opaque dots accumulate on the existing surface. This keeps its silhouette registered to the page.
+        let layer = 0;
+        for (const material of finishes.values()) {
+          const ink = THREE.MathUtils.clamp(progress * 1.24 - layer++ * 0.075, 0, 1);
+          material.opacity = Math.round(ink * 12) / 12;
+        }
+      }
+      pivots.forEach((pivot, index) => {
+        const t = THREE.MathUtils.clamp(progress * 1.25 - index * 0.08, 0, 1);
+        pivot.position.set(0, 0, 0);
+        pivot.rotation.set(0, 0, 0, 'XYZ');
+        pivot.scale.setScalar(1);
+        if (theme === 'blueprint') {
+          pivot.rotation.set(Math.atan(1 / Math.sqrt(2)), -Math.PI / 4, 0, 'YXZ');
+          return;
+        }
+        if (theme === 'collage') {
+          // Thin paper casts a small physical shadow over the next sheet even at rest.
+          const peel = (1 - t) ** 2;
+          const side = (workIndex + index) % 2 ? -1 : 1;
+          pivot.scale.z = .31;
+          pivot.position.set(side * 1.9 * peel, (1.3 + index * .15) * peel, index * .075 + peel);
+          pivot.rotation.set(.84 * peel, side * .68 * peel, side * (.075 + .68 * peel));
+          return;
+        }
+        if (t === 1 || theme === 'type' || theme === 'minimal') return;
+
+        const remaining = (1 - t) ** 2;
+        if (theme === 'spatial') {
+          // Each ring or shell approaches its socket from a distinct depth and azimuth.
+          const angle = workIndex * 1.67 + index * 2.4;
+          const near = (workIndex + index) % 2 === 0;
+          pivot.position.set(Math.cos(angle) * 3.8 * remaining, Math.sin(angle) * 2.8 * remaining, (near ? 2.8 : -4) * remaining);
+          pivot.rotation.set((near ? 0.8 : -0.7) * remaining, (index % 2 ? -1.1 : 1.3) * remaining, 0);
+          pivot.scale.setScalar(1 + (near ? 0.39 : -0.54) * remaining);
+        } else if (theme === 'glass') {
+          // All panes follow the same slant, with the deeper layers meeting the front face last.
+          const separation = 1.7 + index * 0.35;
+          pivot.position.set(separation * remaining, separation * 0.65 * remaining, -(0.9 + index * 0.45) * remaining);
+          pivot.rotation.set(0.20 * remaining, -0.96 * remaining, -0.14 * remaining);
+        } else if (theme === 'clay') {
+          // Accelerate to the floor first. Compression and the small rebound begin after contact.
+          const fall = Math.min(t / 0.52, 1);
+          const landing = THREE.MathUtils.clamp((t - 0.52) / 0.48, 0, 1);
+          const squash = Math.sin(Math.PI * Math.min(landing / 0.27, 1)) * 0.25;
+          const rebound = Math.sin(Math.PI * THREE.MathUtils.clamp((landing - 0.27) / 0.61, 0, 1)) * 0.36;
+          const stretch = Math.sin(Math.PI * fall) * 0.06;
+          pivot.position.y = (1 - fall * fall) * (2.2 + index * 0.18) - squash * 0.72 + rebound;
+          pivot.scale.set(1 + squash - stretch / 2, 1 - squash + stretch, 1 + squash - stretch / 2);
+        } else if (theme === 'retro') {
+          // A window outline expands horizontally, then opens in discrete rows.
+          const tick = Math.floor(t * 6) / 6;
+          pivot.scale.set(Math.min(1, .12 + tick * 3), Math.max(.04, (tick - .24) / .76), .35 + .65 * tick);
+        } else if (theme === 'cinema') {
+          // Hold on a tight first frame, cut to a second angle and settle into the wide shot.
+          const opening = t < .32;
+          pivot.position.x = opening ? (workIndex % 2 ? -.32 : .32) : 0;
+          pivot.position.z = opening ? .55 : -.22 * remaining;
+          pivot.rotation.y = opening ? .32 : -.10 * remaining;
+          pivot.scale.setScalar(opening ? 1.18 : 1 + remaining * .06);
+        } else if (theme === 'organic') {
+          const swell = Math.sin(t * 2.4 * Math.PI) * (1 - t) ** 2;
+          pivot.position.y = -.85 * remaining + swell * .35;
+          pivot.rotation.z = swell * .16;
+          pivot.scale.set(1 - remaining * .23 + swell * .07, 1 - remaining * .5, 1 - remaining * .18);
+        }
+      });
+    },
     update: (time, hover, twist) => {
       if (!disposed) update(time, THREE.MathUtils.clamp(hover, 0, 1), THREE.MathUtils.clamp(twist, 0, 1));
     },
     dispose: () => {
       if (disposed) return;
       disposed = true;
+      setTheme('spatial');
+      finishes.forEach((material) => material.dispose());
       const geometries = new Set<THREE.BufferGeometry>();
       const materials = new Set<THREE.Material>();
       group.traverse((object) => {
@@ -90,7 +267,7 @@ function commerce() {
     return ring;
   });
   fit(group);
-  return sculpture(group, (_time, hover) => {
+  return sculpture('commerce', group, (_time, hover) => {
     rings.forEach((ring, index) => {
       const base = arrangements[index]!.rotation;
       ring.rotation.x = base[0]! + hover * (index === 2 ? 0.10 : -0.035);
@@ -222,7 +399,7 @@ function ribbon(experiment: boolean) {
   band.rotation.set(0.16, -0.22, -0.34);
   group.add(band);
   fit(group);
-  return sculpture(group, (_time, hover, twist) => {
+  return sculpture(experiment ? 'ribbon' : 'logistics', group, (_time, hover, twist) => {
     const requested = experiment ? twist : 0.34;
     if (Math.abs(requested - lastTwist) > 0.0001) {
       surface.write(ribbonSurface(requested));
@@ -251,7 +428,7 @@ function style() {
   fan.rotation.set(-0.22, 0.28, 0.12);
   group.add(fan);
   fit(group);
-  return sculpture(group, (_time, hover) => {
+  return sculpture('style', group, (_time, hover) => {
     fan.rotation.z = 0.12 + hover * 0.08;
     fan.rotation.y = 0.28 - hover * 0.10;
   });
@@ -289,7 +466,7 @@ function reliability() {
   group.children.forEach((child) => child.applyMatrix4(rotation));
   fit(group);
   const positions = sections.map((section) => section.position.clone());
-  return sculpture(group, (_time, hover) => {
+  return sculpture('reliability', group, (_time, hover) => {
     sections.forEach((section, index) => section.position.copy(positions[index]!).multiplyScalar(1 + hover * 0.19));
   });
 }
@@ -344,7 +521,7 @@ function typography() {
   });
   fit(group, 5);
   // Letter transforms belong to the caller after creation (individual dragging).
-  return sculpture(group);
+  return sculpture('type', group);
 }
 
 export function createSculpture(kind: SculptureKind): Sculpture {

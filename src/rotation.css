@@ -1,0 +1,127 @@
+/* These marks follow the same projected circles used for pointer hit testing. */
+.workspace-drag-guides {
+  position: absolute;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.workspace:not(.is-ready) .workspace-drag-guides,
+.case-sculpture:not([data-scene-state='ready']) > .sculpture-drag-guide,
+.sculpture-drag-guide[hidden] {
+  display: none;
+}
+
+html[data-theme-transitioning='exit'] .sculpture-drag-guide { visibility: hidden; }
+
+.sculpture-drag-guide {
+  --rim: 1px;
+  --rim-style: solid;
+  --grip-size: 6px;
+  --guide-ink: #485b50;
+  --mark-opacity: .35;
+  --arcs: conic-gradient(transparent 19deg, #000 19deg 67deg, transparent 67deg 201deg, #000 201deg 247deg, transparent 247deg);
+  display: block;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  color: var(--guide-ink);
+  pointer-events: none;
+  user-select: none;
+}
+
+.sculpture-drag-guide::before,
+.sculpture-drag-guide::after {
+  content: '';
+  position: absolute;
+  opacity: var(--mark-opacity);
+}
+
+.sculpture-drag-guide::before {
+  inset: 0;
+  border: var(--rim) var(--rim-style) currentColor;
+  border-radius: inherit;
+  box-shadow: var(--rim-shadow, none);
+  mask-image: var(--arcs);
+  transform: rotate(var(--drag-turn, 0deg));
+}
+
+/* Rotate the handle about the projected object center, not about the handle. */
+.sculpture-drag-guide::after {
+  inset: 0;
+  transform: rotate(calc(45deg + var(--drag-turn, 0deg)));
+  background: radial-gradient(circle closest-side, currentColor 87%, transparent 100%) center top / var(--grip-size) var(--grip-size) no-repeat;
+  border-radius: inherit;
+}
+
+.case-sculpture-caption { z-index: 2; }
+.case-sculpture[data-scene-state='ready'] .case-sculpture-caption > span {
+  background: var(--scene-paper, #eeede6);
+  box-shadow: 0 0 0 3px var(--scene-paper, #eeede6);
+}
+
+html[data-theme='glass'] .sculpture-drag-guide {
+  --guide-ink: #1a647b;
+  --rim-shadow: inset 0 0 0 1px #ffffffb8;
+  --mark-opacity: .46;
+}
+html[data-theme='clay'] .sculpture-drag-guide {
+  --guide-ink: #86533f;
+  --rim-shadow: inset 1px 1px 1px #fff5da;
+  --rim: 2px;
+  --grip-size: 7px;
+}
+html[data-theme='minimal'] .sculpture-drag-guide {
+  --guide-ink: #53594f;
+  --grip-size: 4px;
+}
+html[data-theme='type'] .sculpture-drag-guide {
+  --guide-ink: #8f3522;
+  --rim: 2px;
+  --grip-size: 6px;
+}
+html[data-theme='blueprint'] .sculpture-drag-guide {
+  --guide-ink: #c6eafd;
+  --rim-style: dashed;
+  --mark-opacity: .52;
+}
+html[data-theme='retro'] .sculpture-drag-guide {
+  --guide-ink: #3f5449;
+  --rim-style: dotted;
+  --rim: 2px;
+}
+html[data-theme='retro'] .sculpture-drag-guide::after {
+  background-image: linear-gradient(currentColor, currentColor);
+  border-radius: 0;
+}
+html[data-theme='collage'] .sculpture-drag-guide {
+  --guide-ink: #633f32;
+  --rim-style: dashed;
+}
+html[data-theme='cinema'] .sculpture-drag-guide {
+  --guide-ink: #e7c396;
+  --mark-opacity: .44;
+  --grip-size: 4px;
+}
+html[data-theme='organic'] .sculpture-drag-guide {
+  --guide-ink: #346556;
+  --rim-shadow: inset 0 0 0 1px #f1ffcfbb;
+  --grip-size: 5px;
+}
+
+html .sculpture-drag-guide:is([data-state='hover'], [data-state='focus'], [data-state='drag']) {
+  --mark-opacity: .95;
+  --arcs: conic-gradient(#000 85deg, transparent 85deg 96deg, #000 96deg 265deg, transparent 265deg 276deg, #000 276deg);
+}
+html .sculpture-drag-guide[data-state='drag'] { --grip-size: 9px; }
+html .sculpture-drag-guide[data-state='focus'] { --rim: 2px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .sculpture-drag-guide::before, .sculpture-drag-guide::after { transition: opacity 120ms ease-out; }
+}
+
+@media (forced-colors: active) {
+  .sculpture-drag-guide { color: ButtonText; }
+  .sculpture-drag-guide:is([data-state='hover'], [data-state='focus'], [data-state='drag']) { color: Highlight; }
+  .sculpture-drag-guide::after { forced-color-adjust: none; }
+}

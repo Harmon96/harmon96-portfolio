@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { profile, projects } from '../content/portfolio';
-import { spatialWorks } from '../content/spatial';
+import { playgroundProjects, spatialWorks } from '../content/spatial';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { hrefFor, projectPath } from '../lib/routes';
 import type { WorldController, WorldMode } from '../scene/world';
 
 const playItems = [
-  { id: 'ribbon', title: '비틀어보기', description: '띠를 잡고 좌우로 움직여보세요. 같은 형태가 다르게 보입니다.' },
-  { id: 'type', title: '글자 흩뜨리기', description: '글자 하나를 집어서 옮겨보세요. 놓은 곳에 머무릅니다.' },
+  { id: 'ribbon', title: '비틀어보기', description: '띠를 잡고 좌우로 움직이면 비틀리는 정도가 달라집니다.' },
+  { id: 'type', title: '글자 흩뜨리기', description: 'PLAY에서 글자 하나를 잡아 원하는 자리에 놓아 보세요.' },
 ];
 
 export function SpatialWorkspace({ base }: { base: string }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const labels = useRef<HTMLDivElement>(null);
+  const guides = useRef<HTMLDivElement>(null);
   const controller = useRef<WorldController | null>(null);
   const [mode, setMode] = useState<WorldMode>('work');
   const [selected, setSelected] = useState<string | null>(null);
@@ -26,16 +26,16 @@ export function SpatialWorkspace({ base }: { base: string }) {
   const returnFocus = useRef<HTMLElement | null>(null);
   const summary = useRef<HTMLElement>(null);
   const chooser = useRef<HTMLDivElement>(null);
-  const selectedProject = projects.find((project) => project.slug === selected);
+  const selectedProject = playgroundProjects.find((project) => project.slug === selected);
   const selectedPlay = playItems.find((item) => item.id === selected);
 
   useEffect(() => {
     let cancelled = false;
     import('../scene/world').then(({ createWorld }) => {
-      if (cancelled || !canvas.current || !labels.current) return;
+      if (cancelled || !canvas.current || !labels.current || !guides.current) return;
       try {
         controller.current = createWorld({
-          canvas: canvas.current, labels: labels.current, reduced: reducedRef.current,
+          canvas: canvas.current, labels: labels.current, guides: guides.current, reduced: reducedRef.current,
           onSelect: setSelected,
           onTwist: setTwist,
           onError: () => { controller.current?.dispose(); controller.current = null; setFailed(true); setReady(false); setSelected(null); },
@@ -95,9 +95,16 @@ export function SpatialWorkspace({ base }: { base: string }) {
       <span id="experiments" className="workspace-anchor" />
       <div className="workspace-stage" aria-hidden="true">
         <div className="workspace-word">{mode === 'work' ? 'WORK' : 'PLAY'}</div>
+        <div className="workspace-plates">
+          {spatialWorks.map(work => <i key={work.slug} data-anchor={work.slug} />)}
+        </div>
         {!ready && <div className="workspace-loading-shape" />}
       </div>
       <canvas ref={canvas} className="spatial-stage" tabIndex={ready ? 0 : -1} role="img" aria-describedby="workspace-keyboard-guide" aria-label={mode === 'work' ? '작품을 잡아 돌려보는 전시장' : '직접 조작하는 입체 실험 공간'} data-ready="false" data-view-yaw="0" />
+      <div className="workspace-drag-guides" ref={guides} aria-hidden="true">
+        {[...spatialWorks.map(work => work.slug), ...playItems.map(item => item.id)].map(id =>
+          <i key={id} className="sculpture-drag-guide" data-exhibit={id} hidden />)}
+      </div>
       <span className="sr-only" id="workspace-keyboard-guide">{mode === 'work' ? '작품을 선택한 뒤 캔버스에서 방향키로 돌릴 수 있습니다. Home 키로 작품을 처음 방향으로 돌립니다.' : '방향키로 실험 공간을 돌리고 Home 키로 처음 방향으로 돌아갑니다. 띠를 선택하면 좌우 방향키로 비틀 수 있습니다.'}</span>
       {ready && !selected && (
         <p className="workspace-gesture">
@@ -116,10 +123,6 @@ export function SpatialWorkspace({ base }: { base: string }) {
             onClick={() => setSelected(item.id)}>{item.title}</button>
         ))}
       </div>
-      <div className="workspace-introduction">
-        <p>{profile.role}</p>
-        <h1>제품을 만드는 개발자입니다.<br />재미있는 인터랙션을 좋아합니다.</h1>
-      </div>
       {selected && (
         <aside className="workspace-detail" ref={summary} tabIndex={-1} aria-labelledby="workspace-detail-title">
           <button type="button" className="workspace-back" aria-label={`전체 ${mode === 'work' ? '작업' : '실험'}`} onClick={clearSelection}>← 전체 {mode === 'work' ? '작업' : '실험'}</button>
@@ -137,7 +140,7 @@ export function SpatialWorkspace({ base }: { base: string }) {
       <div className="workspace-bottom">
         {mode === 'work' ? (
           <nav className="workspace-direct" aria-label="프로젝트 목록">
-            {projects.map((project) => (
+            {playgroundProjects.map((project) => (
               <a key={project.slug} href={hrefFor(projectPath(project.slug), base)}
                 aria-label={`${project.name} 상세 보기`}>
                 {project.name}<span aria-hidden="true">↗</span>

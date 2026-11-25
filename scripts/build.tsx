@@ -3,8 +3,8 @@ import { resolve } from 'node:path';
 import { build } from 'vite';
 import { renderToString } from 'react-dom/server';
 import { App, pageMetadata } from '../src/App';
-import { projects } from '../src/content/portfolio';
-import { normalizeBase, projectPath } from '../src/lib/routes';
+import { allProjects } from '../src/content/portfolio';
+import { normalizeBase, playgroundPath, projectPath } from '../src/lib/routes';
 
 const base = normalizeBase(process.env.PORTFOLIO_BASE_PATH ?? '/');
 await build({ base });
@@ -17,10 +17,11 @@ const escape = (value: string) =>
     /[&<>"']/g,
     (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!,
   );
-const paths = ['/', ...projects.map((project) => projectPath(project.slug)), '/404/'];
+const paths = ['/', playgroundPath, ...allProjects.map((project) => projectPath(project.slug)), '/404/'];
 for (const path of paths) {
   const metadata = pageMetadata(path);
   const html = template
+    .replace('<html lang="ko">', path === playgroundPath ? '<html lang="ko" data-theme="spatial">' : '<html lang="ko">')
     .replace(
       marker,
       () => `<div id="root">${renderToString(<App path={path} base={base} />)}</div>`,
