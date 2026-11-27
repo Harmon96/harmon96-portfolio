@@ -29,11 +29,6 @@
   letter-spacing: -.05em;
 }
 
-.portfolio-company {
-  margin-top: 6px;
-  color: var(--muted);
-}
-
 .portfolio-links {
   display: flex;
   flex-wrap: wrap;
@@ -86,34 +81,44 @@
 
 .portfolio-project h3 a {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 4px 12px;
+  padding-block: 8px;
+  margin-block: -8px;
 }
 
-.portfolio-project .arrow {
-  color: var(--blue-ink);
-}
-
-.portfolio-project ul {
-  display: grid;
+.portfolio-case-link {
+  display: inline-flex;
+  align-items: center;
   gap: 4px;
-  margin: 10px 0 0;
-  padding-inline-start: 1.15em;
+  color: var(--blue-ink);
+  font-size: 14px;
+  letter-spacing: normal;
 }
 
-.portfolio-record :is(li, article > p) {
+.portfolio-case-link .arrow {
+  width: 16px;
+  height: 16px;
+}
+
+.portfolio-project p {
+  margin-top: 8px;
+}
+
+.portfolio-record article > p {
   color: var(--muted);
   line-height: 1.75;
-}
-
-.portfolio-project li::marker {
-  font-size: .7em;
 }
 
 .portfolio-employer .portfolio-tenure {
   margin: 2px 0 10px;
   font-size: 14px;
+}
+
+.portfolio-employer p:not(.portfolio-tenure) + p {
+  margin-top: 6px;
 }
 
 @media (max-width: 800px) {

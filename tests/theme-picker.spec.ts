@@ -107,9 +107,9 @@ test('메뉴에서 탭으로 나가거나 바깥을 누르면 포커스를 가�
   await expect(picker).not.toBeFocused();
 
   await activate(picker, isMobile);
-  const experiments = page.getByRole('navigation', { name: '주요 메뉴' }).getByRole('link', { name: '실험', exact: true });
-  await activate(experiments, isMobile);
-  await expect(page).toHaveURL(/#experiments$/);
+  const projects = page.getByRole('navigation', { name: '주요 메뉴' }).getByRole('link', { name: '작업', exact: true });
+  await activate(projects, isMobile);
+  await expect(page).toHaveURL(/#projects$/);
   await expect(list).toHaveCount(0);
   await expect(picker).not.toBeFocused();
 });

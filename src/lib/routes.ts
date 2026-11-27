@@ -14,8 +14,8 @@ export function localPath(pathname: string, base: string) {
   return path ? `/${path.replace(/\/+$/, '')}/` : '/';
 }
 
-export function projectPath(slug: string) {
-  return `/projects/${slug}/`;
+export function projectPath(slug: string, source: 'home' | 'playground' = 'home') {
+  return `${source === 'playground' ? playgroundPath : '/'}projects/${slug}/`;
 }
 
 export function hrefFor(path: string, base: string) {

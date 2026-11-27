@@ -5,7 +5,7 @@ import { prepareThemeFonts } from './themeFonts';
 // paragraph and its containing article never receive the same movement twice.
 const pieces = [
   '.wordmark', '.header-actions nav', '.workspace-word', '.workspace-gesture',
-  '.workspace-plates i', '.workspace-labels button', '.workspace-detail', '.workspace-direct a', '.workspace-chooser button',
+  '.workspace-plates i', '.workspace-labels button', '.workspace-detail', '.workspace-direct a',
   '.workspace-loading-shape', '.spatial-stage', '.about-heading', '.about-story > p',
   '.about-more', '.exhibition-careers article', '.case-header > :not(h1)', '.case-title-line', '.case-toc',
   '.case-article section > h2', '.case-article section > p', '.flow-diagram figcaption',

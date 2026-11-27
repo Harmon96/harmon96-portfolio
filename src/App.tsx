@@ -1,30 +1,40 @@
 import { Layout } from './components/Layout';
-import { allProjects } from './content/portfolio';
+import { allProjects, homeProjects, profile } from './content/portfolio';
+import { playgroundDescription, playgroundProjects } from './content/spatial';
 import { playgroundPath, projectPath } from './lib/routes';
 import { SpatialWorkspace } from './components/SpatialWorkspace';
 import { Home } from './pages/Home';
 import { ProjectPage } from './pages/ProjectPage';
 
+export const projectRoutes = new Map([
+  ...allProjects.map(project => [projectPath(project.slug), {
+    project,
+    fromPlayground: !homeProjects.includes(project) && playgroundProjects.includes(project),
+  }] as const),
+  ...playgroundProjects.map(project => [
+    projectPath(project.slug, 'playground'), { project, fromPlayground: true },
+  ] as const),
+]);
+
 export function pageMetadata(path: string) {
-  const project = allProjects.find((project) => projectPath(project.slug) === path);
+  const project = projectRoutes.get(path)?.project;
   if (path === playgroundPath) {
-    return { title: 'Playground — 임재혁', description: '3D 조형물을 돌려보고 열 가지 디자인 테마를 바꿔볼 수 있는 공간입니다.' };
+    return { title: 'Playground — 임재혁', description: playgroundDescription };
   }
   return {
     title:
       path === '/'
-        ? '임재혁 — Product Engineer & Creative Developer'
+        ? `${profile.name} — ${profile.role}`
         : project
           ? `${project.name} — 임재혁의 프로젝트`
           : '페이지를 찾을 수 없습니다 — 임재혁',
-    description:
-      project?.description ??
-      '프론트엔드 개발자 임재혁의 포트폴리오. 해외 상품 결제와 배송 신청 화면을 만든 과정, 브라우저 확장 프로그램의 로그인 문제를 고친 경험을 담았습니다.',
+    description: project?.description ?? `${profile.role} ${profile.name}의 포트폴리오`,
+    canonical: project && projectPath(project.slug),
   };
 }
 
 export function App({ path, base }: { path: string; base: string }) {
-  const project = allProjects.find((project) => projectPath(project.slug) === path);
+  const route = projectRoutes.get(path);
   return (
     <Layout base={base} playground={path === playgroundPath}>
       {path === '/' ? (
@@ -34,8 +44,8 @@ export function App({ path, base }: { path: string; base: string }) {
           <h1 className="sr-only">Playground</h1>
           <SpatialWorkspace base={base} />
         </>
-      ) : project ? (
-        <ProjectPage project={project} base={base} />
+      ) : route ? (
+        <ProjectPage project={route.project} fromPlayground={route.fromPlayground} base={base} />
       ) : (
         <section className="not-found wrap">
           <p className="eyebrow">404 / PAGE NOT FOUND</p>

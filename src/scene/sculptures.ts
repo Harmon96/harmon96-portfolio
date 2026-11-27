@@ -1,16 +1,15 @@
 import * as THREE from 'three';
+import type { WorkKind } from '../content/spatial';
 import type { ThemeId } from '../lib/theme';
 import { applySurfaceShader } from './finishes';
 
-export type SculptureKind = 'commerce' | 'logistics' | 'style' | 'reliability' | 'ribbon' | 'type';
 export type Sculpture = {
   group: THREE.Group;
-  parts: THREE.Object3D[];
   setTheme: (theme: ThemeId) => void;
   assemble: (theme: ThemeId, progress: number) => void;
   prepareExit: (camera: THREE.Camera) => void;
   disperse: (progress: number) => void;
-  update: (time: number, hover: number, twist: number) => void;
+  update: (hover: number) => void;
   dispose: () => void;
 };
 
@@ -51,10 +50,10 @@ const pigments = {
   organic: ['#5eaa93', '#dcaa89', '#adb96e', '#6d9bb0'],
 };
 
-function sculpture(kind: SculptureKind, group: THREE.Group, update: Sculpture['update'] = () => {}): Sculpture {
+function sculpture(kind: WorkKind, group: THREE.Group, update: Sculpture['update']): Sculpture {
   let disposed = false;
   const parts = [...group.children];
-  // Theme poses and motion live on the pivots. Children keep their own rotation and letter positions.
+  // Theme poses and motion live on the pivots so children keep their own rotation.
   const pivots = parts.map((part) => {
     const pivot = new THREE.Group();
     pivot.add(part);
@@ -71,7 +70,7 @@ function sculpture(kind: SculptureKind, group: THREE.Group, update: Sculpture['u
     if (node instanceof THREE.Mesh) materialSlots.push({ mesh: node, original: node.material });
   });
   const finishes = new Map<THREE.Material, THREE.MeshPhysicalMaterial>();
-  const workIndex = { commerce: 0, logistics: 1, ribbon: 1, style: 2, reliability: 3, type: 0 }[kind];
+  const workIndex = { commerce: 0, logistics: 1, style: 2, reliability: 3 }[kind];
   function finish(original: THREE.Material) {
     let material = finishes.get(original);
     if (!material) {
@@ -90,9 +89,9 @@ function sculpture(kind: SculptureKind, group: THREE.Group, update: Sculpture['u
     }
     let index = 0;
     for (const material of finishes.values()) {
-      const pigment = kind === 'type' ? index : kind === 'reliability' && index > 0 ? 0 : workIndex;
+      const pigment = kind === 'reliability' && index > 0 ? 0 : workIndex;
       material.color.set(pigments[theme][pigment]!);
-      if (kind !== 'type' && index > 0) material.color.multiplyScalar(index % 2 ? 0.69 : 1.13);
+      if (index > 0) material.color.multiplyScalar(index % 2 ? 0.69 : 1.13);
       material.roughness = { glass: .13, clay: .95, minimal: .8, type: .8, blueprint: 1, retro: 1, collage: 1, cinema: .31, organic: .27 }[theme];
       material.clearcoat = theme === 'glass' || theme === 'organic' ? 1 : 0;
       material.clearcoatRoughness = 0.08;
@@ -112,7 +111,7 @@ function sculpture(kind: SculptureKind, group: THREE.Group, update: Sculpture['u
     }
   }
   return {
-    group, parts, setTheme,
+    group, setTheme,
     prepareExit(camera) {
       // Compute destinations in camera space so even a small study beside the index clears its canvas.
       parts.forEach((part, index) => {
@@ -211,8 +210,8 @@ function sculpture(kind: SculptureKind, group: THREE.Group, update: Sculpture['u
         }
       });
     },
-    update: (time, hover, twist) => {
-      if (!disposed) update(time, THREE.MathUtils.clamp(hover, 0, 1), THREE.MathUtils.clamp(twist, 0, 1));
+    update: (hover) => {
+      if (!disposed) update(THREE.MathUtils.clamp(hover, 0, 1));
     },
     dispose: () => {
       if (disposed) return;
@@ -267,7 +266,7 @@ function commerce() {
     return ring;
   });
   fit(group);
-  return sculpture('commerce', group, (_time, hover) => {
+  return sculpture('commerce', group, (hover) => {
     rings.forEach((ring, index) => {
       const base = arrangements[index]!.rotation;
       ring.rotation.x = base[0]! + hover * (index === 2 ? 0.10 : -0.035);
@@ -317,7 +316,7 @@ function solidSurface(initial: SurfacePoint, uSegments: number, vSegments: numbe
     }
   }
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage));
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setIndex(indices);
   geometry.addGroup(0, frontCount, 0);
   geometry.addGroup(frontCount, backCount, 1);
@@ -370,7 +369,7 @@ function solidSurface(initial: SurfacePoint, uSegments: number, vSegments: numbe
     geometry.computeBoundingSphere();
   }
   write(initial);
-  return { geometry, write };
+  return geometry;
 }
 
 function ribbonSurface(twist: number): SurfacePoint {
@@ -391,20 +390,14 @@ function ribbonSurface(twist: number): SurfacePoint {
   };
 }
 
-function ribbon(experiment: boolean) {
+function logistics() {
   const group = new THREE.Group();
-  let lastTwist = experiment ? 0 : 0.34;
-  const surface = solidSurface(ribbonSurface(lastTwist), 128, 6, 0.085);
-  const band = mesh(surface.geometry, [matte(0xe8753c, 0.72), matte(0xc75b2d, 0.76)]);
+  const surface = solidSurface(ribbonSurface(0.34), 128, 6, 0.085);
+  const band = mesh(surface, [matte(0xe8753c, 0.72), matte(0xc75b2d, 0.76)]);
   band.rotation.set(0.16, -0.22, -0.34);
   group.add(band);
   fit(group);
-  return sculpture(experiment ? 'ribbon' : 'logistics', group, (_time, hover, twist) => {
-    const requested = experiment ? twist : 0.34;
-    if (Math.abs(requested - lastTwist) > 0.0001) {
-      surface.write(ribbonSurface(requested));
-      lastTwist = requested;
-    }
+  return sculpture('logistics', group, (hover) => {
     band.rotation.y = -0.22 + hover * 0.10;
   });
 }
@@ -424,11 +417,11 @@ function style() {
     );
   };
   const surface = solidSurface(sample, 264, 12, 0.055, true);
-  const fan = mesh(surface.geometry, [matte(0xe6dfc9, 0.77), matte(0x41443d, 0.73)]);
+  const fan = mesh(surface, [matte(0xe6dfc9, 0.77), matte(0x41443d, 0.73)]);
   fan.rotation.set(-0.22, 0.28, 0.12);
   group.add(fan);
   fit(group);
-  return sculpture('style', group, (_time, hover) => {
+  return sculpture('style', group, (hover) => {
     fan.rotation.z = 0.12 + hover * 0.08;
     fan.rotation.y = 0.28 - hover * 0.10;
   });
@@ -449,7 +442,7 @@ function reliability() {
       return target.set(Math.sin(theta) * Math.cos(phi), Math.cos(theta), Math.sin(theta) * Math.sin(phi));
     };
     const surface = solidSurface(sample, 48, 48, 0.15);
-    const shell = mesh(surface.geometry, [outer, inner]);
+    const shell = mesh(surface, [outer, inner]);
     const middle = start + length / 2;
     shell.position.set(Math.cos(middle) * 0.10, index === 1 ? 0.025 : -0.012, Math.sin(middle) * 0.10);
     shell.rotation.z = (index - 1) * 0.055;
@@ -466,71 +459,16 @@ function reliability() {
   group.children.forEach((child) => child.applyMatrix4(rotation));
   fit(group);
   const positions = sections.map((section) => section.position.clone());
-  return sculpture('reliability', group, (_time, hover) => {
+  return sculpture('reliability', group, (hover) => {
     sections.forEach((section, index) => section.position.copy(positions[index]!).multiplyScalar(1 + hover * 0.19));
   });
 }
 
-function letterShape(letter: string) {
-  const shape = new THREE.Shape();
-  if (letter === 'P') {
-    shape.moveTo(0, 0); shape.lineTo(0, 1.5); shape.lineTo(0.62, 1.5);
-    shape.quadraticCurveTo(1.03, 1.5, 1.03, 1.10); shape.lineTo(1.03, 0.94);
-    shape.quadraticCurveTo(1.03, 0.59, 0.65, 0.59); shape.lineTo(0.31, 0.59); shape.lineTo(0.31, 0); shape.closePath();
-    const hole = new THREE.Path();
-    hole.moveTo(0.31, 0.88); hole.lineTo(0.58, 0.88);
-    hole.quadraticCurveTo(0.72, 0.88, 0.72, 1.02); hole.lineTo(0.72, 1.08);
-    hole.quadraticCurveTo(0.72, 1.21, 0.58, 1.21); hole.lineTo(0.31, 1.21); hole.closePath();
-    shape.holes.push(hole);
-  } else if (letter === 'L') {
-    shape.moveTo(0, 0); shape.lineTo(0.95, 0); shape.lineTo(0.95, 0.31);
-    shape.lineTo(0.32, 0.31); shape.lineTo(0.32, 1.5); shape.lineTo(0, 1.5); shape.closePath();
-  } else if (letter === 'A') {
-    shape.moveTo(0, 0); shape.lineTo(0.41, 1.5); shape.lineTo(0.75, 1.5); shape.lineTo(1.16, 0);
-    shape.lineTo(0.82, 0); shape.lineTo(0.74, 0.33); shape.lineTo(0.42, 0.33); shape.lineTo(0.34, 0); shape.closePath();
-    const hole = new THREE.Path();
-    hole.moveTo(0.48, 0.61); hole.lineTo(0.68, 0.61); hole.lineTo(0.58, 1.02); hole.closePath();
-    shape.holes.push(hole);
-  } else {
-    shape.moveTo(0, 1.5); shape.lineTo(0.35, 1.5); shape.lineTo(0.59, 0.96);
-    shape.lineTo(0.84, 1.5); shape.lineTo(1.19, 1.5); shape.lineTo(0.76, 0.61);
-    shape.lineTo(0.76, 0); shape.lineTo(0.43, 0); shape.lineTo(0.43, 0.61); shape.closePath();
-  }
-  return shape;
-}
-
-function typography() {
-  const group = new THREE.Group();
-  const colors = [0x365de0, 0xe7783e, 0xe7dfc9, 0x3b403e];
-  const rotations = [-0.11, 0.035, -0.045, 0.09];
-  const depths = [0.08, -0.08, 0.10, -0.025];
-  ['P', 'L', 'A', 'Y'].forEach((letter, index) => {
-    const letterGroup = new THREE.Group();
-    letterGroup.name = `letter-${letter}`;
-    letterGroup.userData.letterIndex = index;
-    letterGroup.userData.letter = letter;
-    const geometry = new THREE.ExtrudeGeometry(letterShape(letter), {
-      depth: 0.27, steps: 1, bevelEnabled: true, bevelSize: 0.045, bevelThickness: 0.045, bevelSegments: 4, curveSegments: 16,
-    });
-    geometry.center();
-    const letterMesh = mesh(geometry, matte(colors[index]!, index === 2 ? 0.78 : 0.69));
-    letterGroup.add(letterMesh);
-    letterGroup.position.set((index - 1.5) * 1.27, index === 1 ? -0.08 : index === 2 ? 0.035 : 0, depths[index]!);
-    letterGroup.rotation.set(0.025, (index - 1.5) * 0.035, rotations[index]!);
-    group.add(letterGroup);
-  });
-  fit(group, 5);
-  // Letter transforms belong to the caller after creation (individual dragging).
-  return sculpture('type', group);
-}
-
-export function createSculpture(kind: SculptureKind): Sculpture {
+export function createSculpture(kind: WorkKind): Sculpture {
   switch (kind) {
     case 'commerce': return commerce();
-    case 'logistics': return ribbon(false);
+    case 'logistics': return logistics();
     case 'style': return style();
     case 'reliability': return reliability();
-    case 'ribbon': return ribbon(true);
-    case 'type': return typography();
   }
 }

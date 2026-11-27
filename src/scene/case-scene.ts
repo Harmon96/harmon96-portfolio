@@ -42,7 +42,7 @@ export function createCaseScene({ canvas, guide, kind, rotation, reducedMotion, 
     renderer.forceContextLoss();
     throw error;
   }
-  sculpture.update(0, 0, 0);
+  sculpture.update(0);
   const bounds = new THREE.Box3().setFromObject(sculpture.group);
   const center = bounds.getCenter(new THREE.Vector3());
   const size = bounds.getSize(new THREE.Vector3());

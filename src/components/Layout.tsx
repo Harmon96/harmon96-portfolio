@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { profile } from '../content/portfolio';
 import { Arrow } from './Arrow';
 import { hrefFor, playgroundPath } from '../lib/routes';
@@ -11,14 +11,7 @@ const homeSections = ['projects', 'experience'];
 
 export function Layout({ children, base, playground }: { children: ReactNode; base: string; playground: boolean }) {
   const current = useActiveSection(homeSections);
-  const [hash, setHash] = useState('');
-  useEffect(() => {
-    const update = () => setHash(location.hash);
-    update();
-    window.addEventListener('hashchange', update);
-    return () => window.removeEventListener('hashchange', update);
-  }, []);
-  const active = playground ? (hash === '#experiments' ? 'experiments' : 'projects') : current;
+  const active = playground ? 'projects' : current;
   return (
     <>
       <PageEffects />
@@ -33,9 +26,7 @@ export function Layout({ children, base, playground }: { children: ReactNode; ba
           <nav aria-label="주요 메뉴">
             <a aria-current={active === 'projects' ? 'location' : undefined}
               href={playground ? '#projects' : hrefFor('/#projects', base)}>작업</a>
-            {playground ? (
-              <a aria-current={active === 'experiments' ? 'location' : undefined} href="#experiments">실험</a>
-            ) : (
+            {!playground && (
               <>
                 <a aria-current={active === 'experience' ? 'location' : undefined}
                   href={hrefFor('/#experience', base)}>경력</a>

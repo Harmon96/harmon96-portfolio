@@ -1,5 +1,7 @@
 import { allProjects, smartGrid } from './portfolio';
 
+export const playgroundDescription = '3D 조형물 회전';
+
 export type WorkKind = 'commerce' | 'logistics' | 'style' | 'reliability';
 
 export const spatialWorks: {

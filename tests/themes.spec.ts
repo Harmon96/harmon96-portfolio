@@ -101,7 +101,7 @@ test('정상 모션에서 빠르게 연타하면 한 번만 테마를 바꾸고 
   await changeTheme(page);
 });
 
-test('테마를 바꿔도 미리보기, 띠 변형과 실험 선택이 유지된다', async ({ page }) => {
+test('테마를 바꿔도 선택한 작품의 미리보기와 사례 링크가 유지된다', async ({ page }) => {
   await page.goto('./playground/#projects');
   const canvas = page.locator('.spatial-stage');
   await expect(canvas).toHaveAttribute('data-ready', 'true');
@@ -111,33 +111,21 @@ test('테마를 바꿔도 미리보기, 띠 변형과 실험 선택이 유지된
   await changeTheme(page);
   await expect(preview.getByRole('heading')).toHaveText('해외 상품 직접구매');
   await expect(preview.getByRole('link', { name: '사례 읽기' })).toBeVisible();
-
-  await page.getByRole('navigation', { name: '주요 메뉴' }).getByRole('link', { name: '실험', exact: true }).click();
-  await page.getByRole('group', { name: '실험 선택' }).getByRole('button', { name: '비틀어보기' }).click();
-  const slider = page.getByRole('slider', { name: '띠 비틀기' });
-  await slider.press('End');
-  await expect(slider).toHaveValue('100');
-  await changeTheme(page);
-  await expect(page).toHaveURL(/#experiments$/);
-  await expect(slider).toHaveValue('100');
-  await expect(canvas).toHaveAttribute('data-selected', 'ribbon');
-  await expect(canvas).toHaveAttribute('data-twist', '100');
+  await expect(canvas).toHaveAttribute('data-selected', '1688-direct-purchase');
 });
 
 test('선택한 테마는 Playground에서만 적용되고 다시 방문해도 유지된다', async ({ page }) => {
   await page.goto('./playground/#projects');
   const chosen = await changeTheme(page);
-  await page.getByRole('link', { name: '해외 상품 직접구매 상세 보기' }).click();
+  await page.getByRole('link', { name: '해외 상품 직접구매 미리보기' }).click();
+  await page.getByRole('link', { name: '사례 읽기' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('해외 상품 직접구매');
   await expect(page.locator('html[data-theme]')).toHaveCount(0);
   await expect(themeButton(page)).toHaveCount(0);
   await page.reload();
   await expect(page.locator('html[data-theme]')).toHaveCount(0);
-  await page.getByRole('link', { name: '프로젝트 목록', exact: true }).click();
-  await expect(page.locator('#projects')).toBeVisible();
-  await expect(page.locator('html[data-theme]')).toHaveCount(0);
-  await page.getByRole('navigation', { name: '주요 메뉴' }).getByRole('link', { name: /Playground/i }).click();
-  await page.getByRole('button', { name: '건너뛰기' }).click();
+  await page.getByRole('link', { name: '전시로 돌아가기', exact: true }).click();
+  await expect(page).toHaveURL(/\/playground\/#projects$/);
   await expect(page.locator('html')).toHaveAttribute('data-theme', chosen);
   await expect(themeButton(page)).toBeVisible();
 });
@@ -170,7 +158,7 @@ test('320px에서 WebGL을 쓸 수 없어도 모든 테마의 프로젝트 목�
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('해외 상품 직접구매');
   await expect(page.locator('html[data-theme]')).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
-  await expect(page.locator('#result p').last()).toBeVisible();
+  await expect(page.getByRole('main').getByText('Zustand')).toBeVisible();
 });
 
 test('연속 전환 시 마지막 테마의 알림만 남았다가 자동으로 닫힌다', async ({ page }) => {
@@ -202,7 +190,7 @@ test.describe('JavaScript 비활성화', () => {
     await expect(themeButton(page)).toBeHidden();
     await page.locator('#projects').getByRole('link', { name: /해외 상품 직접구매/ }).click();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('해외 상품 직접구매');
-    await expect(page.locator('#result p').last()).toBeVisible();
+    await expect(page.getByRole('main').getByText('Zustand')).toBeVisible();
   });
 });
 

@@ -16,8 +16,14 @@ import './portfolio-home.css';
 
 const base = import.meta.env.BASE_URL;
 const path = localPath(window.location.pathname, base);
-if (path === '/' && window.location.hash === '#experiments') {
-  window.location.replace(hrefFor(playgroundPath, base) + window.location.search + '#experiments');
+if (path === '/' || path === playgroundPath) {
+  const redirectOldBookmark = () => {
+    if (window.location.hash === '#experiments') {
+      window.location.replace(hrefFor(playgroundPath, base) + window.location.search + '#projects');
+    }
+  };
+  redirectOldBookmark();
+  window.addEventListener('hashchange', redirectOldBookmark);
 }
 const metadata = pageMetadata(path);
 document.title = metadata.title;

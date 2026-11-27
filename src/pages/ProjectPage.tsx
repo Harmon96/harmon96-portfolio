@@ -1,96 +1,51 @@
-import { useMemo } from 'react';
 import { playgroundProjects } from '../content/spatial';
-import { projects, type CaseStudy, type Project } from '../content/portfolio';
-import { useActiveSection } from '../hooks/useActiveSection';
+import { homeProjects, type Project } from '../content/portfolio';
 import { Arrow } from '../components/Arrow';
-import { FlowDiagram } from '../components/FlowDiagram';
 import { hrefFor, playgroundPath, projectPath } from '../lib/routes';
 
-function CaseBody({ project }: { project: CaseStudy }) {
-  const sectionIds = useMemo(() => project.sections.map((section) => section.id), [project]);
-  const active = useActiveSection(sectionIds);
-
-  return (
-    <div className="case-body wrap">
-      <aside className="case-toc">
-        <nav aria-label="사례 목차">
-          {project.sections.map((section) => (
-            <a
-              key={section.id}
-              aria-current={active === section.id ? 'location' : undefined}
-              href={`#${section.id}`}
-            >
-              {section.title}
-            </a>
-          ))}
-        </nav>
-      </aside>
-      <article className="case-article" aria-label={`${project.name} 사례 본문`}>
-        {project.sections.map((section) => (
-          <section key={section.id} id={section.id}>
-            <h2>{section.title}</h2>
-            {section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-            {section.id === 'implementation' && (
-              <div className="case-flow">
-                <FlowDiagram flow={project.flow} />
-              </div>
-            )}
-          </section>
-        ))}
-      </article>
-    </div>
-  );
-}
-
-export function ProjectPage({ project, base }: { project: Project; base: string }) {
-  const onHome = projects.includes(project);
-  const collection = onHome ? projects : playgroundProjects;
-  const listHref = hrefFor((onHome ? '/' : playgroundPath) + '#projects', base);
-  const next = collection[(collection.indexOf(project) + 1) % collection.length]!;
+export function ProjectPage({ project, base, fromPlayground }: { project: Project; base: string; fromPlayground: boolean }) {
+  const collection = fromPlayground ? playgroundProjects : homeProjects;
+  const listPath = fromPlayground ? playgroundPath : '/';
+  const index = collection.indexOf(project);
+  const next = index >= 0 && collection.length > 1 ? collection[(index + 1) % collection.length] : undefined;
+  const { details } = project;
 
   return (
     <>
-      <div className="case-header wrap" id="scope">
-        <a className="back-link" href={listHref}>
+      <article className="case-header wrap" id="scope" aria-labelledby="context">
+        <a className="back-link" href={hrefFor(listPath + '#projects', base)}>
           <Arrow direction="left" />
-          프로젝트 목록
+          {fromPlayground ? '전시로 돌아가기' : '주요 작업으로'}
         </a>
-        {project.title && <p className="case-name">{project.name}</p>}
-        <h1>
-          {(project.title ?? project.name).split('\n').map(line => (
-            <span className="case-title-line" key={line}>{line}</span>
-          ))}
-        </h1>
-        {project.kind === 'case' && (
+        <h1 id="context">{project.name}</h1>
+        {/* Older shared links point to these sections even in the shortened cases. */}
+        <div id={details ? undefined : 'result'}>
+          <p className="case-description" id={details ? undefined : 'implementation'}>{project.description}</p>
+        </div>
+        {details && (
           <>
-            <p className="case-description">{project.lead ?? project.description}</p>
             <dl className="case-meta">
               <div><dt>담당 범위</dt><dd>{project.role}</dd></div>
-              <div><dt>결과</dt><dd>{project.milestone}</dd></div>
+              <div><dt>결과</dt><dd>{details.milestone}</dd></div>
             </dl>
+            <div className="case-note" id="implementation">
+              {details.implementation.map(paragraph => <p key={paragraph}>{paragraph}</p>)}
+              <p id="result">{details.followUp}</p>
+            </div>
           </>
         )}
-      </div>
-      {project.kind === 'case' ? (
-        <CaseBody project={project} />
-      ) : (
-        <article id="result" className="case-note wrap" aria-label={`${project.name} 경력 소개`}>
-          <p>{project.note}</p>
-        </article>
+      </article>
+      {next && (
+        <nav className="next-case wrap" aria-label="프로젝트 탐색">
+          <a href={hrefFor(
+            !fromPlayground && next.details ? projectPath(next.slug) : `${listPath}#work-${next.slug}`, base,
+          )}>
+            <small>다음 작업</small>
+            <span>{next.name}</span>
+            <Arrow />
+          </a>
+        </nav>
       )}
-      <div className="next-case wrap">
-        <a href={hrefFor(projectPath(next.slug), base)}>
-          <span>
-            <small>다음 프로젝트</small>
-            {next.name}
-          </span>
-          <Arrow direction="right" />
-        </a>
-        <a className="text-link" href={listHref}>
-          전체 프로젝트 보기
-          <Arrow />
-        </a>
-      </div>
     </>
   );
 }

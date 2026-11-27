@@ -67,10 +67,14 @@ test('모션 감소 설정에서 키보드로 입장하고 Escape로 다시 보�
   await expect(dialog).toHaveCount(0);
 });
 
-test('기존 실험 북마크에서 Playground 실험을 직접 연다', async ({ page }) => {
-  await page.goto('./#experiments');
-  await expect(page).toHaveURL(/\/playground\/#experiments$/);
-  await expect(page.getByRole('button', { name: '인트로 다시 보기' })).toBeAttached();
-  await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.locator('.workspace')).toHaveAttribute('data-mode', 'play');
-});
+for (const bookmark of ['./#experiments', './playground/#experiments']) {
+  test(bookmark + ' 북마크에서 작업 목록을 연다', async ({ page, baseURL }) => {
+    await page.goto(bookmark);
+    await expect(page).toHaveURL(new URL('playground/#projects', baseURL).href);
+    await expect(page.getByRole('button', { name: '인트로 다시 보기' })).toBeAttached();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: '실험', exact: true })).toHaveCount(0);
+    await expect(page.locator('#experiments')).toHaveCount(0);
+    await expect(page.getByRole('navigation', { name: '프로젝트 목록' }).getByRole('link')).toHaveCount(4);
+  });
+}

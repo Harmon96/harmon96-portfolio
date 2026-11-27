@@ -5,28 +5,22 @@ import type { ThemeId } from '../lib/theme';
 import { assemblyProgress, configureRenderer, observeSceneTheme, sceneInView, studioLighting } from './theme';
 import { dragPadding, dragRadians, drawGuide, newDragArea, projectDragArea, type DragArea } from './dragArea';
 
-export type WorldMode = 'work' | 'play';
 type Options = {
   canvas: HTMLCanvasElement;
   labels: HTMLElement;
   guides: HTMLElement;
   reduced: boolean;
   onSelect: (id: string) => void;
-  onTwist: (value: number) => void;
   onError: () => void;
 };
 export type WorldController = {
-  setMode: (mode: WorldMode) => void;
   focus: (id: string | null) => void;
-  setTwist: (value: number) => void;
-  resetPlay: () => void;
-  moveLetter: (index: number, direction: 'left' | 'right' | 'up' | 'down') => void;
   setReduced: (value: boolean) => void;
   dispose: () => void;
 };
-type Exhibit = { id: string; sculpture: Sculpture; position: THREE.Vector3; scale: number; mode: WorldMode; area: DragArea; guide: HTMLElement };
+type Exhibit = { id: string; sculpture: Sculpture; position: THREE.Vector3; scale: number; area: DragArea; guide: HTMLElement };
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
-const modelRadius = (id: string) => id === 'type' ? 2.5 : 1.4;
+const modelRadius = 1.4;
 
 export function createWorld(options: Options): WorldController {
   const { canvas, labels, guides } = options;
@@ -70,60 +64,40 @@ export function createWorld(options: Options): WorldController {
     sculpture.group.scale.setScalar(item.scale);
     sculpture.group.traverse((node) => { node.userData.exhibitId = item.slug; });
     scene.add(sculpture.group);
-    return { id: item.slug, sculpture, position: new THREE.Vector3(...item.position), scale: item.scale, mode: 'work', area: newDragArea(), guide: guideFor(item.slug) };
+    return { id: item.slug, sculpture, position: new THREE.Vector3(...item.position), scale: item.scale, area: newDragArea(), guide: guideFor(item.slug) };
   });
-  for (const [id, kind, position, scale] of [
-    ['ribbon', 'ribbon', [-2, .2, .2], 1.05],
-    ['type', 'type', [1.8, -.1, -.1], .85],
-  ] as const) {
-    const sculpture = createSculpture(kind);
-    sculpture.group.position.fromArray(position);
-    sculpture.group.scale.setScalar(.001);
-    sculpture.group.visible = false;
-    sculpture.group.traverse((node) => { node.userData.exhibitId = id; });
-    scene.add(sculpture.group);
-    exhibits.push({ id, sculpture, position: new THREE.Vector3(...position), scale, mode: 'play', area: newDragArea(), guide: guideFor(id) });
-  }
-  const type = exhibits.find((item) => item.id === 'type')!;
-  const letterOrigins = type.sculpture.parts.map((letter) => ({ position: letter.position.clone(), rotation: letter.rotation.clone() }));
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
   const projected = new THREE.Vector3();
   const target = new THREE.Vector3(0, -.1, 0);
   const goalTarget = target.clone();
   const goalCamera = new THREE.Vector3();
-  const direction = new THREE.Vector3();
-  const dragPlane = new THREE.Plane();
-  const dragPoint = new THREE.Vector3();
   let width = 1, height = 1, mobile = false;
-  let mode: WorldMode = 'work';
   let selected: string | null = null;
   let hover: string | null = null;
   let focused: string | null = null;
-  let yaw = -.06, pitch = .12, velocity = 0;
-  let savedView = { yaw, pitch };
+  const yaw = -.06, pitch = .12;
   let framedOffset: number | null = null;
   let reduced = options.reduced;
-  let twist = .35;
   let theme: ThemeId = 'spatial';
   let assemblyStart: number | null = null;
   let leaving: { start: number; duration: number } | null = null;
   let snapLayout = false;
   let frame = 0, lastTime = 0, running = sceneInView(canvas), disposed = false, entered = false;
-  let pointer: null | { id: number; x: number; y: number; lastX: number; lastTime: number; moved: boolean; yaw: number; pitch: number; hit: string | null; rotate: THREE.Group | null; rotation: THREE.Euler | null; radius: number; turn: number; twist: number; letter: THREE.Object3D | null; letterStart: THREE.Vector3 | null; planeStart: THREE.Vector3 | null } = null;
+  let pointer: {
+    id: number; x: number; y: number; moved: boolean;
+    exhibit: Exhibit; rotation: THREE.Euler; radius: number; turn: number;
+  } | null = null;
   const fine = matchMedia('(pointer: fine)').matches;
   const getExhibit = (id: string | null) => exhibits.find((item) => item.id === id);
 
-  function point(event: globalThis.PointerEvent) {
+  function hit(event: globalThis.PointerEvent) {
     const box = canvas.getBoundingClientRect();
     mouse.set((event.clientX - box.left) / box.width * 2 - 1, -(event.clientY - box.top) / box.height * 2 + 1);
     raycaster.setFromCamera(mouse, camera);
-  }
-  function hit(event: globalThis.PointerEvent) {
-    point(event);
-    const candidates = exhibits.filter(item => item.mode === mode && (!selected || item.id === selected) && item.sculpture.group.visible);
+    const candidates = exhibits.filter(item => (!selected || item.id === selected) && item.sculpture.group.visible);
     const direct = raycaster.intersectObjects(candidates.map(item => item.sculpture.group), true)[0];
-    if (direct) return { id: direct.object.userData.exhibitId as string, object: direct.object };
+    if (direct) return getExhibit(direct.object.userData.exhibitId);
 
     // Holes and the margin belong to the nearest projected handle. An actual surface always wins.
     const x = (mouse.x + 1) * width / 2, y = (1 - mouse.y) * height / 2;
@@ -134,7 +108,7 @@ export function createWorld(options: Options): WorldController {
       const distance = Math.hypot(x - area.x, y - area.y);
       if (area.visible && distance <= area.radius && distance < best) { nearest = item; best = distance; }
     }
-    return { id: nearest?.id ?? null, object: null };
+    return nearest;
   }
   function updateCameraGoal() {
     const active = getExhibit(selected);
@@ -146,7 +120,7 @@ export function createWorld(options: Options): WorldController {
         goalTarget.z += Math.sin(yaw) * framedOffset;
       } else if (!mobile) goalTarget.x -= 1.25;
       else goalTarget.y -= 1.95;
-      const distance = mobile ? 8.8 : selected === 'type' ? 7.5 : 6.1;
+      const distance = mobile ? 8.8 : 6.1;
       goalCamera.copy(goalTarget).add(new THREE.Vector3(Math.sin(yaw) * distance, 1.25, Math.cos(yaw) * distance));
     } else {
       goalTarget.set(0, mobile ? -.25 : -.1, 0);
@@ -158,7 +132,7 @@ export function createWorld(options: Options): WorldController {
     const active = getExhibit(selected);
     key.target.position.copy(active?.position ?? new THREE.Vector3());
     key.position.copy(key.target.position).add(new THREE.Vector3(-4, 7, 6));
-    const extent = active ? selected === 'type' ? 4 : 2.6 : 5;
+    const extent = active ? 2.6 : 5;
     key.shadow.camera.left = key.shadow.camera.bottom = -extent;
     key.shadow.camera.right = key.shadow.camera.top = extent;
     key.shadow.camera.updateProjectionMatrix();
@@ -229,28 +203,6 @@ export function createWorld(options: Options): WorldController {
       }
       if (mobile) exhibit.position.y += .38;
     }
-    const ribbon = getExhibit('ribbon')!;
-    const letters = getExhibit('type')!;
-    if (mobile) {
-      ribbon.position.set(-halfWidth * .2, 2, .1);
-      letters.position.set(halfWidth * .08, -.95, -.2);
-      ribbon.scale = Math.min(1.05, halfWidth * .4);
-      letters.scale = Math.min(.8, halfWidth * .28);
-    } else {
-      ribbon.position.set(-2.75 * spread, .45, .2);
-      letters.position.set(2.45 * spread, -.45, -.2);
-      ribbon.scale = 1.05;
-      letters.scale = Math.min(.85, halfWidth / 5);
-    }
-    if (theme !== 'spatial') {
-      const playScale = { glass: .92, clay: .87, minimal: .56, type: .52, blueprint: .83, retro: .78, collage: .86, cinema: .88, organic: .92 }[theme];
-      ribbon.scale *= playScale;
-      letters.scale *= theme === 'type' ? 1 : playScale;
-      if (!mobile) {
-        ribbon.position.y += theme === 'glass' ? 0.45 : -0.35;
-        letters.position.y += theme === 'type' ? 0.7 : 0.24;
-      }
-    }
     framedOffset = null;
     const active = getExhibit(selected);
     const panel = selected && !mobile ? canvas.parentElement?.querySelector<HTMLElement>('.workspace-detail') : null;
@@ -258,11 +210,11 @@ export function createWorld(options: Options): WorldController {
       // Keep the original close-up when it fits. Otherwise frame it inside the space beside the caption.
       const left = panel.offsetLeft + panel.offsetWidth - canvas.offsetLeft + 10;
       const right = width - 10;
-      const depth = Math.hypot(active.id === 'type' ? 7.5 : 6.1, 1.25);
+      const depth = Math.hypot(6.1, 1.25);
       const px = height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * depth);
       const pad = dragPadding(!fine);
       const originalX = width / 2 + 1.25 * px * Math.cos(yaw);
-      const artwork = modelRadius(active.id) * px;
+      const artwork = modelRadius * px;
       const radius = active.scale * artwork + pad;
       if (originalX - radius < left || originalX + radius > right) {
         const available = Math.max(pad + 1, (right - left) / 2);
@@ -275,7 +227,7 @@ export function createWorld(options: Options): WorldController {
     if (!entered) {
       for (const exhibit of exhibits) {
         exhibit.sculpture.group.position.copy(exhibit.position);
-        exhibit.sculpture.group.scale.setScalar(exhibit.mode === mode ? exhibit.scale : .001);
+        exhibit.sculpture.group.scale.setScalar(exhibit.scale);
       }
     }
     updateCameraGoal();
@@ -286,7 +238,7 @@ export function createWorld(options: Options): WorldController {
   // Project each supporting pane or paper scrap into its artwork's viewport.
   const plateElements = canvas.closest('.workspace')?.querySelectorAll<HTMLElement>('.workspace-plates [data-anchor]');
   function placePlates() {
-    if (!plateElements || selected || mode !== 'work' || (theme !== 'glass' && theme !== 'clay' && theme !== 'collage')) return;
+    if (!plateElements || selected || (theme !== 'glass' && theme !== 'clay' && theme !== 'collage')) return;
     for (const plate of plateElements) {
       const exhibit = getExhibit(plate.dataset.anchor!);
       if (!exhibit) continue;
@@ -314,23 +266,20 @@ export function createWorld(options: Options): WorldController {
   function placeLabels() {
     for (const el of labels.querySelectorAll<HTMLElement>('[data-anchor]')) {
       const e = getExhibit(el.dataset.anchor!);
-      if (!e || e.mode !== mode || selected) continue;
+      if (!e || selected) continue;
       projected.copy(e.sculpture.group.position);
-      projected.y -= e.id === 'type' ? 1 : 1.35 * e.scale;
+      projected.y -= 1.35 * e.scale;
       projected.project(camera);
       el.style.left = `${(projected.x + 1) * .5 * width}px`;
       el.style.top = `${(-projected.y + 1) * .5 * height + (mobile ? 11 : 0)}px`;
-      // The work overview has a fixed camera. Keeping its labels focusable also
-      // restores keyboard focus as the close-up transitions back to the overview.
-      const inView = projected.z < 1 && Math.abs(projected.x) < .9 && Math.abs(projected.y) < .82;
-      el.style.visibility = mode === 'work' || inView ? 'visible' : 'hidden';
+      el.style.visibility = 'visible';
     }
   }
   function placeGuides() {
     for (const item of exhibits) {
       const group = item.sculpture.group;
-      if (item.mode !== mode || (selected && selected !== item.id) || !group.visible) { item.area.visible = false; continue; }
-      projectDragArea(item.area, group.position, modelRadius(item.id) * group.scale.x, camera, width, height, !fine);
+      if ((selected && selected !== item.id) || !group.visible) { item.area.visible = false; continue; }
+      projectDragArea(item.area, group.position, modelRadius * group.scale.x, camera, width, height, !fine);
     }
     for (const item of exhibits) {
       if (item.area.visible && !selected) {
@@ -344,7 +293,7 @@ export function createWorld(options: Options): WorldController {
           item.area.radius = Math.min(item.area.radius, Math.max(22, gap / 2 - 4));
         }
       }
-      const dragging = pointer?.moved && (pointer.hit ?? selected) === item.id;
+      const dragging = pointer?.moved && pointer.exhibit === item;
       const state = dragging ? 'drag' : hover === item.id ? 'hover' : focused === item.id ? 'focus' : 'idle';
       drawGuide(item.guide, item.area, state, dragging ? pointer!.turn : 0);
     }
@@ -359,28 +308,23 @@ export function createWorld(options: Options): WorldController {
     const speed = assemblyStart !== null && theme === 'minimal' ? 24 : 9;
     const ease = reduced || snapLayout || finishAssembly ? 1 : 1 - Math.exp(-dt * speed);
     snapLayout = false;
-    if (!selected && !pointer && Math.abs(velocity) > .0005) {
-      yaw += velocity * dt;
-      velocity *= Math.exp(-dt * 8);
-    } else if (Math.abs(velocity) <= .0005) velocity = 0;
     let unsettled = false;
     const departure = leaving ? THREE.MathUtils.clamp((now - leaving.start) / leaving.duration, 0, 1) : 0;
     for (const [index, e] of exhibits.entries()) {
-      if (leaving && e.mode === mode && (!selected || selected === e.id)) {
+      if (leaving && (!selected || selected === e.id)) {
         e.sculpture.disperse(departure);
       } else if (assemblyStart !== null) {
         const progress = THREE.MathUtils.clamp(assembly * 1.22 - (index % 4) * 0.07, 0, 1);
         e.sculpture.assemble(theme, progress);
       }
-      const visible = e.mode === mode;
-      const desired = visible ? e.scale * (selected && selected !== e.id ? 0 : 1) : 0;
+      const desired = selected && selected !== e.id ? 0 : e.scale;
       const scale = THREE.MathUtils.lerp(e.sculpture.group.scale.x, desired, ease);
       e.sculpture.group.scale.setScalar(Math.max(.001, scale));
       e.sculpture.group.visible = scale > .008;
       const position = e.position.clone();
-      if (visible && selected && selected !== e.id) position.z -= 2;
+      if (selected && selected !== e.id) position.z -= 2;
       e.sculpture.group.position.lerp(position, ease);
-      e.sculpture.update(0, hover === e.id ? 1 : 0, e.id === 'ribbon' ? twist : .35);
+      e.sculpture.update(hover === e.id ? 1 : 0);
       if (Math.abs(scale - desired) > .001 || e.sculpture.group.position.distanceTo(position) > .002) unsettled = true;
     }
     updateCameraGoal();
@@ -395,10 +339,9 @@ export function createWorld(options: Options): WorldController {
     placeGuides();
     canvas.dataset.viewYaw = yaw.toFixed(4);
     canvas.dataset.selected = selected ?? '';
-    canvas.dataset.twist = String(Math.round(twist * 100));
     if (!entered) { entered = true; canvas.dataset.ready = 'true'; }
     if (assembly === 1) assemblyStart = null;
-    const moving = (leaving !== null && departure < 1) || assemblyStart !== null || camera.position.distanceTo(goalCamera) > .002 || target.distanceTo(goalTarget) > .002 || unsettled || Math.abs(velocity) > .0005;
+    const moving = (leaving !== null && departure < 1) || assemblyStart !== null || camera.position.distanceTo(goalCamera) > .002 || target.distanceTo(goalTarget) > .002 || unsettled;
     canvas.dataset.settled = String(!moving && !pointer?.moved);
     if (moving) invalidate();
   }
@@ -408,37 +351,25 @@ export function createWorld(options: Options): WorldController {
   }
   function resetPointer() {
     const id = pointer?.id;
-    if (!disposed && pointer && Math.abs(twist - pointer.twist) > .0001) options.onTwist(Math.round(twist * 100));
     pointer = null;
     if (id !== undefined && canvas.hasPointerCapture(id)) canvas.releasePointerCapture(id);
     canvas.classList.remove('is-dragging');
   }
   function pointerDown(event: globalThis.PointerEvent) {
     if (!event.isPrimary || event.button !== 0) return;
-    const target = hit(event);
     // Keep the drag bound to the work under the initial press, even across other works.
-    const hitId = target.id;
-    if (mode === 'work' && !selected && !hitId) return;
-    const exhibit = getExhibit(selected ?? hitId);
-    const rotate = exhibit?.sculpture.group ?? null;
-    let letter: THREE.Object3D | null = target.object;
-    while (letter && letter.userData.letterIndex === undefined) letter = letter.parent;
-    if (selected !== 'type') letter = null;
-    let planeStart: THREE.Vector3 | null = null;
-    if (letter) {
-      camera.getWorldDirection(direction);
-      letter.getWorldPosition(dragPoint);
-      dragPlane.setFromNormalAndCoplanarPoint(direction, dragPoint);
-      planeStart = raycaster.ray.intersectPlane(dragPlane, new THREE.Vector3());
-    }
-    pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, lastX: event.clientX, lastTime: performance.now(), moved: false, yaw, pitch, hit: hitId, rotate, rotation: rotate?.rotation.clone() ?? null, radius: exhibit?.area.radius ?? 0, turn: 0, twist, letter, letterStart: letter?.position.clone() ?? null, planeStart };
-    velocity = 0;
+    const exhibit = selected ? getExhibit(selected) : hit(event);
+    if (!exhibit) return;
+    pointer = {
+      id: event.pointerId, x: event.clientX, y: event.clientY, moved: false,
+      exhibit, rotation: exhibit.sculpture.group.rotation.clone(), radius: exhibit.area.radius, turn: 0,
+    };
     canvas.setPointerCapture(event.pointerId);
   }
   function pointerMove(event: globalThis.PointerEvent) {
     if (!pointer) {
       if (!fine || event.buttons !== 0) return;
-      const next = hit(event).id;
+      const next = hit(event)?.id ?? null;
       if (hover !== next) { hover = next; canvas.style.cursor = next ? 'grab' : ''; invalidate(); }
       return;
     }
@@ -452,43 +383,17 @@ export function createWorld(options: Options): WorldController {
     pointer.moved = true;
     canvas.classList.add('is-dragging');
     pointer.turn = dragRadians(dx, pointer.radius);
-    if (pointer.letter && pointer.letterStart && pointer.planeStart) {
-      point(event);
-      const at = raycaster.ray.intersectPlane(dragPlane, dragPoint);
-      if (at) {
-        const parent = pointer.letter.parent!;
-        const start = parent.worldToLocal(pointer.planeStart.clone());
-        const next = parent.worldToLocal(at.clone());
-        pointer.letter.position.copy(pointer.letterStart).add(next.sub(start));
-        pointer.letter.position.x = clamp(pointer.letter.position.x, -4, 4);
-        pointer.letter.position.y = clamp(pointer.letter.position.y, -2, 2);
-        pointer.letter.rotation.z = clamp(dx * .002, -.4, .4);
-        pointer.turn = pointer.letter.rotation.z;
-      }
-    } else if (selected === 'ribbon') {
-      twist = clamp(pointer.twist + dx / width, 0, 1);
-      pointer.turn = (twist - pointer.twist) * Math.PI * 2;
-    } else if (pointer.rotate && pointer.rotation) {
-      const g = pointer.rotate;
-      g.rotation.y = pointer.rotation.y + pointer.turn;
-      g.rotation.x = clamp(pointer.rotation.x + (event.pointerType === 'touch' ? 0 : dragRadians(dy, pointer.radius)), -1.3, 1.3);
-    } else {
-      yaw = pointer.yaw + dx / width * 3.2;
-      pitch = clamp(pointer.pitch + (mobile ? 0 : dy / height * 1.1), -.18, .5);
-      const now = performance.now();
-      velocity = reduced ? 0 : clamp((event.clientX - pointer.lastX) / Math.max(8, now - pointer.lastTime) / width * 2400, -1.8, 1.8);
-      pointer.lastX = event.clientX; pointer.lastTime = now;
-    }
+    const rotation = pointer.exhibit.sculpture.group.rotation;
+    rotation.y = pointer.rotation.y + pointer.turn;
+    rotation.x = clamp(pointer.rotation.x + (event.pointerType === 'touch' ? 0 : dragRadians(dy, pointer.radius)), -1.3, 1.3);
     invalidate();
   }
   function pointerUp(event: globalThis.PointerEvent, cancelled = false) {
     if (!pointer || pointer.id !== event.pointerId) return;
-    const click = !pointer.moved && !cancelled ? pointer.hit : null;
-    if (cancelled) velocity = 0;
-    if (pointer.letter) canvas.dataset.letterPosition = `${pointer.letter.userData.letterIndex}:${pointer.letter.position.x.toFixed(2)},${pointer.letter.position.y.toFixed(2)}`;
+    const click = !pointer.moved && !cancelled ? pointer.exhibit.id : null;
     resetPointer();
     hover = !cancelled && event.pointerType !== 'touch' && document.elementFromPoint(event.clientX, event.clientY) === canvas
-      ? hit(event).id : null;
+      ? hit(event)?.id ?? null : null;
     canvas.style.cursor = hover ? 'grab' : '';
     if (click && !selected) options.onSelect(click);
     invalidate();
@@ -503,26 +408,18 @@ export function createWorld(options: Options): WorldController {
   function clearFocus() { focused = null; invalidate(); }
   function keyDown(event: KeyboardEvent) {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home'].includes(event.key)) return;
-    if (mode === 'work' && !selected) return;
-    event.preventDefault();
-    resetPointer(); velocity = 0;
     const active = getExhibit(selected);
+    if (!active) return;
+    event.preventDefault();
+    resetPointer();
+    const rotation = active.sculpture.group.rotation;
     if (event.key === 'Home') {
-      yaw = -.06; pitch = .12;
-      if (active) {
-        const work = spatialWorks.find((item) => item.slug === selected);
-        active.sculpture.group.rotation.set(...(work?.rotation ?? [0, 0, 0]));
-      }
-      if (selected === 'ribbon') { twist = .35; options.onTwist(35); }
-    } else if (selected === 'ribbon') {
-      twist = clamp(twist + (event.key === 'ArrowLeft' || event.key === 'ArrowDown' ? -.05 : .05), 0, 1);
-      options.onTwist(Math.round(twist * 100));
-    } else if (active) {
-      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') active.sculpture.group.rotation.y += event.key === 'ArrowLeft' ? -.15 : .15;
-      else active.sculpture.group.rotation.x = clamp(active.sculpture.group.rotation.x + (event.key === 'ArrowUp' ? -.15 : .15), -1.3, 1.3);
+      const work = spatialWorks.find(item => item.slug === active.id)!;
+      rotation.set(...work.rotation);
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      rotation.y += event.key === 'ArrowLeft' ? -.15 : .15;
     } else {
-      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') yaw += event.key === 'ArrowLeft' ? -.15 : .15;
-      else pitch = clamp(pitch + (event.key === 'ArrowUp' ? -.08 : .08), -.18, .5);
+      rotation.x = clamp(rotation.x + (event.key === 'ArrowUp' ? -.15 : .15), -1.3, 1.3);
     }
     invalidate();
   }
@@ -536,7 +433,7 @@ export function createWorld(options: Options): WorldController {
   }
   function visibility() {
     running = sceneInView(canvas);
-    if (!running) { cancelAnimationFrame(frame); frame = 0; resetPointer(); velocity = 0; resetThemeMotion(); }
+    if (!running) { cancelAnimationFrame(frame); frame = 0; resetPointer(); resetThemeMotion(); }
     else { lastTime = 0; invalidate(); }
   }
   canvas.addEventListener('pointerdown', pointerDown);
@@ -579,54 +476,22 @@ export function createWorld(options: Options): WorldController {
     if (reduced || !running) return;
     resetThemeMotion();
     for (const exhibit of exhibits) {
-      if (exhibit.mode === mode && (!selected || selected === exhibit.id)) exhibit.sculpture.prepareExit(camera);
+      if (!selected || selected === exhibit.id) exhibit.sculpture.prepareExit(camera);
     }
     leaving = { start: performance.now(), duration };
     invalidate();
   }, resetThemeMotion);
 
   return {
-    setMode(next) {
-      if (mode === next) return;
-      mode = next; selected = null; hover = null; velocity = 0; resetPointer();
-      yaw = -.06; pitch = .12;
-      canvas.style.cursor = '';
-      canvas.dataset.mode = next;
-      resize();
-    },
     focus(id) {
       if (selected === id) return;
-      if (id && !selected) savedView = { yaw, pitch };
-      selected = id; hover = null; velocity = 0; resetPointer();
+      selected = id; hover = null; resetPointer();
       canvas.style.cursor = '';
-      if (!id) { yaw = savedView.yaw; pitch = savedView.pitch; }
       resize();
-    },
-    setTwist(value) { const next = clamp(value / 100, 0, 1); if (next !== twist) { twist = next; invalidate(); } },
-    resetPlay() {
-      twist = .35;
-      type.sculpture.parts.forEach((letter, index) => {
-        const origin = letterOrigins[index];
-        if (origin) { letter.position.copy(origin.position); letter.rotation.copy(origin.rotation); }
-      });
-      options.onTwist(35);
-      delete canvas.dataset.letterPosition;
-      invalidate();
-    },
-    moveLetter(index, direction) {
-      const letter = type.sculpture.parts[index];
-      if (!letter) return;
-      if (direction === 'left' || direction === 'right') letter.position.x = clamp(letter.position.x + (direction === 'left' ? -.25 : .25), -4, 4);
-      else letter.position.y = clamp(letter.position.y + (direction === 'down' ? -.25 : .25), -2, 2);
-      canvas.dataset.letterPosition = `${index}:${letter.position.x.toFixed(2)},${letter.position.y.toFixed(2)}`;
-      invalidate();
     },
     setReduced(value) {
       reduced = value;
-      if (value) {
-        velocity = 0;
-        resetThemeMotion();
-      }
+      if (value) resetThemeMotion();
       invalidate();
     },
     dispose() {
